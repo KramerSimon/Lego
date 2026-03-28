@@ -1,1 +1,34 @@
-/* You can add global styles to this file, and also import other style files */
+@import '@angular/material/prebuilt-themes/cyan-orange.css';
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
+:root {
+	--lego-ink: #12313d;
+	--lego-ink-soft: #33515d;
+	--lego-surface: #ffffff;
+	--lego-surface-muted: #eef5f8;
+	--lego-accent: #0b7285;
+	--lego-accent-2: #f08c00;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	font-family: 'Space Grotesk', sans-serif;
+	color: var(--lego-ink);
+	background: linear-gradient(160deg, #f7f8f3 0%, #e6f1f6 100%);
+}
+
+code,
+pre {
+	font-family: 'IBM Plex Mono', monospace;
+}
+
+.mat-icon,
+.material-icons {
+	font-family: 'Material Icons' !important;
+}

@@ -1,8 +1,6 @@
 import express from 'express';
-import { getInventory, addInventory, updateInventory, deleteInventory } from './inventory.controller.js';
+import { getInventories, getInventory } from './inventory.controller.js';
 const router = express.Router();
-router.get('/', getInventory);
-router.post('/', addInventory);
-router.put('/:id', updateInventory);
-router.delete('/:id', deleteInventory);
+router.get('/', getInventories);
+router.get('/:id', getInventory);
 export default router;

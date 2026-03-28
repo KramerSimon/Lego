@@ -1,0 +1,68 @@
+.page-bg {
+	min-height: 100vh;
+	padding: 20px 24px 28px;
+	background:
+		radial-gradient(circle at 10% 10%, rgba(240, 140, 0, 0.22), transparent 35%),
+		radial-gradient(circle at 90% 0%, rgba(11, 114, 133, 0.2), transparent 35%),
+		linear-gradient(160deg, #f7f8f3 0%, #e6f1f6 100%);
+}
+
+.hero-toolbar {
+	background: linear-gradient(90deg, #0f172a 0%, #111827 100%);
+	color: #f8fafc;
+	border-radius: 16px;
+	margin-bottom: 20px;
+	gap: 10px;
+	font-weight: 600;
+}
+
+.hero-copy {
+	margin-bottom: 16px;
+}
+
+.hero-copy h1 {
+	margin: 0;
+	font-size: clamp(1.7rem, 3vw, 2.5rem);
+	letter-spacing: 0.02em;
+}
+
+.hero-copy p {
+	margin: 8px 0 0;
+	max-width: 760px;
+	color: #30505b;
+}
+
+.top-tabs {
+	border-radius: 16px;
+	overflow: hidden;
+	background: rgba(255, 255, 255, 0.92);
+	backdrop-filter: blur(4px);
+	box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+}
+
+.nested-tabs {
+	padding: 12px;
+}
+
+:host ::ng-deep .mat-mdc-tab .mdc-tab__text-label {
+	color: #45606a;
+	font-weight: 600;
+}
+
+:host ::ng-deep .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label {
+	color: #0b7285;
+}
+
+:host ::ng-deep .mdc-tab-indicator__content--underline {
+	border-color: #0b7285 !important;
+}
+
+@media (max-width: 700px) {
+	.page-bg {
+		padding: 12px;
+	}
+
+	.hero-toolbar {
+		border-radius: 12px;
+	}
+}

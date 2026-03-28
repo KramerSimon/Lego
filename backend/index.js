@@ -1,13 +1,45 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import inventoryRouter from '/inventory/inventory.router.js';
+import cors from 'cors';
+import inventoryRouter from './inventory/inventory.router.js';
+import inventoryPartsRouter from './inventory/inventory_parts/inventory_parts.router.js';
+import partsRouter from './inventory/inventory_parts/parts/parts.router.js';
+import partCategoriesRouter from './inventory/inventory_parts/parts/part_categories/part_categories.router.js';
+import partRelationshipsRouter from './inventory/inventory_parts/parts/part_relationships/part_relationships.router.js';
+import elementsRouter from './inventory/inventory_parts/parts/elements/elements.router.js';
+import colorsRouter from './inventory/inventory_parts/parts/colors/colors.router.js';
+import inventoryMinifigsRouter from './inventory/inventory_minifigs/inventory_minifigs.router.js';
+import minifigsRouter from './inventory/inventory_minifigs/minifigs/minifigs.router.js';
+import inventorySetsRouter from './inventory/inventory_sets/inventory_sets.router.js';
+import setsRouter from './inventory/inventory_sets/sets/sets.router.js';
+import themesRouter from './inventory/inventory_sets/sets/themes/themes.router.js';
+import usersRouter from './users/users.router.js';
+import userPartsRouter from './users/user_parts/user_parts.router.js';
+import userMissingPartsRouter from './users/user_missing_parts/user_missing_parts.router.js';
+import userSetsRouter from './users/user_sets/user_sets.router.js';
 const app = express();
+app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
 app.use('/inventory', inventoryRouter);
+app.use('/inventory_parts', inventoryPartsRouter);
+app.use('/sets', setsRouter);
+app.use('/parts', partsRouter);
+app.use('/part_categories', partCategoriesRouter);
+app.use('/part_relationships', partRelationshipsRouter);
+app.use('/elements', elementsRouter);
+app.use('/colors', colorsRouter);
+app.use('/inventory_minifigs', inventoryMinifigsRouter);
+app.use('/minifigs', minifigsRouter);
+app.use('/inventory_sets', inventorySetsRouter);
+app.use('/themes', themesRouter);
+app.use('/users', usersRouter);
+app.use('/user_parts', userPartsRouter);
+app.use('/user_missing_parts', userMissingPartsRouter);
+app.use('/user_sets', userSetsRouter);
 app.get('/', (request, response) => {
-  res.redirect('/inventory');
+  response.redirect('/inventory');
 });
-app.use(express.static(__dirname))
 app.listen(3000, () => {
   console.log('Server is running on port 3000');
 });
