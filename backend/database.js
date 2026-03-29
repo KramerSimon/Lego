@@ -28,6 +28,55 @@ class Database {
     return this.query(sql, params);
   }
 
+  withTransaction(work) {
+    return new Promise((resolve, reject) => {
+      this.pool.getConnection((connectionError, connection) => {
+        if (connectionError) {
+          reject(connectionError);
+          return;
+        }
+
+        const txQuery = (sql, params = []) => new Promise((queryResolve, queryReject) => {
+          connection.query(sql, params, (error, result) => {
+            if (error) {
+              queryReject(error);
+            } else {
+              queryResolve(result);
+            }
+          });
+        });
+
+        connection.beginTransaction(async (beginError) => {
+          if (beginError) {
+            connection.release();
+            reject(beginError);
+            return;
+          }
+
+          try {
+            const result = await work({ query: txQuery });
+            connection.commit((commitError) => {
+              if (commitError) {
+                connection.rollback(() => {
+                  connection.release();
+                  reject(commitError);
+                });
+                return;
+              }
+              connection.release();
+              resolve(result);
+            });
+          } catch (error) {
+            connection.rollback(() => {
+              connection.release();
+              reject(error);
+            });
+          }
+        });
+      });
+    });
+  }
+
   parsePagination(query = {}) {
     const pageNum = Number.parseInt(query.page, 10);
     const pageSizeNum = Number.parseInt(query.pageSize, 10);

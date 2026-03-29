@@ -1,24 +1,27 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
-import { InventoriesComponent } from './tables/inventories.component';
-import { InventoryPartsComponent } from './tables/inventory-parts.component';
-import { PartsComponent } from './tables/parts.component';
-import { PartCategoriesComponent } from './tables/part-categories.component';
-import { PartRelationshipsComponent } from './tables/part-relationships.component';
-import { ElementsComponent } from './tables/elements.component';
-import { ColorsComponent } from './tables/colors.component';
-import { InventoryMinifigsComponent } from './tables/inventory-minifigs.component';
-import { MinifigsComponent } from './tables/minifigs.component';
-import { InventorySetsComponent } from './tables/inventory-sets.component';
-import { SetsComponent } from './tables/sets.component';
-import { ThemesComponent } from './tables/themes.component';
-import { UsersComponent } from './tables/users.component';
-import { UserPartsComponent } from './tables/user-parts.component';
-import { UserMissingPartsComponent } from './tables/user-missing-parts.component';
-import { UserSetsComponent } from './tables/user-sets.component';
+import { MatButtonModule } from '@angular/material/button';
+import { InventoriesComponent } from './features/tables/components/inventories/inventories.component';
+import { InventoryPartsComponent } from './features/tables/components/inventory-parts/inventory-parts.component';
+import { PartsComponent } from './features/tables/components/parts/parts.component';
+import { PartCategoriesComponent } from './features/tables/components/part-categories/part-categories.component';
+import { PartRelationshipsComponent } from './features/tables/components/part-relationships/part-relationships.component';
+import { ElementsComponent } from './features/tables/components/elements/elements.component';
+import { ColorsComponent } from './features/tables/components/colors/colors.component';
+import { InventoryMinifigsComponent } from './features/tables/components/inventory-minifigs/inventory-minifigs.component';
+import { MinifigsComponent } from './features/tables/components/minifigs/minifigs.component';
+import { InventorySetsComponent } from './features/tables/components/inventory-sets/inventory-sets.component';
+import { SetsComponent } from './features/tables/components/sets/sets.component';
+import { ThemesComponent } from './features/tables/components/themes/themes.component';
+import { UsersComponent } from './features/tables/components/users/users.component';
+import { UserPartsComponent } from './features/tables/components/user-parts/user-parts.component';
+import { UserMissingPartsComponent } from './features/tables/components/user-missing-parts/user-missing-parts.component';
+import { UserSetsComponent } from './features/tables/components/user-sets/user-sets.component';
+import { AuthFormComponent } from './features/auth/components/auth-form/auth-form.component';
+import { AuthService } from './core/services/auth.service';
 
 @Component({
   selector: 'lego-root',
@@ -27,6 +30,7 @@ import { UserSetsComponent } from './tables/user-sets.component';
     MatTabsModule,
     MatToolbarModule,
     MatIconModule,
+    MatButtonModule,
     InventoriesComponent,
     InventoryPartsComponent,
     PartsComponent,
@@ -42,11 +46,13 @@ import { UserSetsComponent } from './tables/user-sets.component';
     UsersComponent,
     UserPartsComponent,
     UserMissingPartsComponent,
-    UserSetsComponent
+    UserSetsComponent,
+    AuthFormComponent
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App {
   protected readonly title = 'Lego Collection Manager';
+  protected readonly auth = inject(AuthService);
 }

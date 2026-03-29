@@ -1,0 +1,39 @@
+<mat-card class="auth-card">
+  <mat-card-header>
+    <mat-card-title>User Authentication</mat-card-title>
+    <mat-card-subtitle>Login with username or email and password.</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div *ngIf="auth.user() as user; else loginForm" class="auth-state">
+      <p><strong>Logged in as:</strong> {{ user.username }} (ID: {{ user.user_id }})</p>
+      <button mat-stroked-button type="button" (click)="auth.logout()">
+        <mat-icon>logout</mat-icon>
+        Logout
+      </button>
+    </div>
+
+    <ng-template #loginForm>
+      <form [formGroup]="form" (ngSubmit)="submit()" class="auth-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Username or Email</mat-label>
+          <input matInput formControlName="identifier" placeholder="simon or simon@example.com" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Password</mat-label>
+          <input matInput type="password" formControlName="password" />
+        </mat-form-field>
+
+        <div class="auth-actions">
+          <button mat-raised-button color="primary" type="submit" [disabled]="auth.authenticating()">
+            <mat-icon>login</mat-icon>
+            Login
+          </button>
+        </div>
+      </form>
+
+      <p *ngIf="error()" class="auth-error">{{ error() }}</p>
+    </ng-template>
+  </mat-card-content>
+</mat-card>

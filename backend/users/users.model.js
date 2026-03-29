@@ -1,4 +1,10 @@
 import database from '../database.js';
+import bcrypt from 'bcryptjs';
+
+async function hasPasswordColumn() {
+  const rows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['password_hash']);
+  return Array.isArray(rows) && rows.length > 0;
+}
 async function getAll(query = {}) {
   try {
     return database.paginateTable('users', query);
@@ -16,8 +22,20 @@ async function getItem(id) {
 }
 async function add(user) {
   try {
-    const sql = 'INSERT INTO users (username, email, full_name) VALUES (?, ?, ?)';
-    return database.queryClose(sql, [user.username, user.email, user.full_name]).then(result => {
+    const includePassword = await hasPasswordColumn();
+    const plainPassword = String(user.password ?? '').trim();
+    const passwordHash = includePassword && plainPassword
+      ? await bcrypt.hash(plainPassword, 12)
+      : null;
+
+    const sql = includePassword
+      ? 'INSERT INTO users (username, email, full_name, password_hash) VALUES (?, ?, ?, ?)'
+      : 'INSERT INTO users (username, email, full_name) VALUES (?, ?, ?)';
+    const values = includePassword
+      ? [user.username, user.email, user.full_name, passwordHash]
+      : [user.username, user.email, user.full_name];
+
+    return database.queryClose(sql, values).then(result => {
       return { id: result.insertId, ...user };
     });
   } catch (error) {
@@ -26,8 +44,20 @@ async function add(user) {
 }
 async function update(id, user) {
   try {
-    const sql = 'UPDATE users SET name = ?, email = ?, full_name = ? WHERE user_id = ?';
-    return database.queryClose(sql, [user.name, user.email, user.full_name, id]).then(result => {
+    const includePassword = await hasPasswordColumn();
+    const plainPassword = String(user.password ?? '').trim();
+    const passwordHash = includePassword && plainPassword
+      ? await bcrypt.hash(plainPassword, 12)
+      : null;
+
+    const sql = includePassword && passwordHash
+      ? 'UPDATE users SET username = ?, email = ?, full_name = ?, password_hash = ? WHERE user_id = ?'
+      : 'UPDATE users SET username = ?, email = ?, full_name = ? WHERE user_id = ?';
+    const values = includePassword && passwordHash
+      ? [user.username, user.email, user.full_name, passwordHash, id]
+      : [user.username, user.email, user.full_name, id];
+
+    return database.queryClose(sql, values).then(result => {
       if (result.affectedRows > 0) {
         return { id, ...user };
       } else {

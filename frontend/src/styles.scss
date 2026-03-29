@@ -1,5 +1,4 @@
 @import '@angular/material/prebuilt-themes/cyan-orange.css';
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
 :root {
@@ -9,6 +8,8 @@
 	--lego-surface-muted: #eef5f8;
 	--lego-accent: #0b7285;
 	--lego-accent-2: #f08c00;
+	--mat-app-font-family: Verdana, Geneva, Tahoma, sans-serif;
+	--mdc-typography-font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
 
 * {
@@ -18,14 +19,38 @@
 html,
 body {
 	margin: 0;
-	font-family: 'Space Grotesk', sans-serif;
+	font-family: Verdana, Geneva, Tahoma, sans-serif;
 	color: var(--lego-ink);
 	background: linear-gradient(160deg, #f7f8f3 0%, #e6f1f6 100%);
 }
 
+body,
+body * {
+	font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+.mat-mdc-card-title,
+.mat-mdc-card-subtitle,
+.mat-mdc-card-title *,
+.mat-mdc-card-subtitle *,
+.mat-mdc-header-cell,
+.mat-mdc-header-cell *,
+.mdc-tab__text-label {
+	font-family: Verdana, Geneva, Tahoma, sans-serif !important;
+}
+
+.mat-mdc-select-value-text,
+.mat-mdc-select-min-line,
+.mat-mdc-option .mdc-list-item__primary-text,
+.mat-mdc-option,
+.cdk-overlay-pane .mat-mdc-select-panel,
+.cdk-overlay-pane .mat-mdc-option {
+	font-family: Verdana, Geneva, Tahoma, sans-serif !important;
+}
+
 code,
 pre {
-	font-family: 'IBM Plex Mono', monospace;
+	font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
 
 .mat-icon,

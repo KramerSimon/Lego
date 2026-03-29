@@ -1,62 +1,68 @@
 <div class="page-bg">
 	<mat-toolbar class="hero-toolbar">
-		<mat-icon>construction</mat-icon>
-		<span>{{ title }}</span>
+		<div class="toolbar-title">
+			<mat-icon>construction</mat-icon>
+			<span>{{ title }}</span>
+		</div>
+		<span class="spacer"></span>
+		<button class="logout-btn" mat-stroked-button type="button" *ngIf="auth.user()" (click)="auth.logout()">Logout</button>
 	</mat-toolbar>
 
-	<section class="hero-copy">
-		<h1>Build Desk</h1>
-		<p>Plan builds, track missing pieces, and browse your LEGO catalog in one place.</p>
-	</section>
+	<ng-container *ngIf="auth.user(); else loginOnly">
+		<section class="hero-copy">
+			<h1>Build Desk</h1>
+			<p>Plan builds, track missing pieces, and browse your LEGO catalog in one place.</p>
+		</section>
 
-	<mat-tab-group class="top-tabs" animationDuration="300ms">
-		<mat-tab label="Build Actions">
-			<mat-tab-group class="nested-tabs" animationDuration="250ms">
-				<mat-tab label="Add Sets">
-					<lego-user-sets></lego-user-sets>
-				</mat-tab>
-				<mat-tab label="Add Parts">
-					<lego-user-parts></lego-user-parts>
-				</mat-tab>
-				<mat-tab label="Add Missing Parts">
-					<lego-user-missing-parts></lego-user-missing-parts>
-				</mat-tab>
-			</mat-tab-group>
-		</mat-tab>
+		<mat-tab-group class="top-tabs" animationDuration="300ms">
+			<mat-tab label="Build Actions">
+				<ng-template matTabContent>
+					<div class="nested-tabs">
+						<lego-user-sets></lego-user-sets>
+					</div>
+				</ng-template>
+			</mat-tab>
 
-		<mat-tab label="Set Catalogue">
-			<mat-tab-group class="nested-tabs" animationDuration="250ms">
-				<mat-tab label="Sets">
-					<lego-sets></lego-sets>
-				</mat-tab>
-				<mat-tab label="Themes">
-					<lego-themes></lego-themes>
-				</mat-tab>
-				<mat-tab label="Inventory Sets">
-					<lego-inventory-sets></lego-inventory-sets>
-				</mat-tab>
-			</mat-tab-group>
-		</mat-tab>
+			<mat-tab label="Set Catalog">
+				<ng-template matTabContent>
+					<div class="nested-tabs">
+						<lego-sets></lego-sets>
+					</div>
+				</ng-template>
+			</mat-tab>
 
-		<mat-tab label="All Tables">
-			<mat-tab-group class="nested-tabs" animationDuration="250ms">
-				<mat-tab label="Inventories"><lego-inventories></lego-inventories></mat-tab>
-				<mat-tab label="Inventory Parts"><lego-inventory-parts></lego-inventory-parts></mat-tab>
-				<mat-tab label="Parts"><lego-parts></lego-parts></mat-tab>
-				<mat-tab label="Part Categories"><lego-part-categories></lego-part-categories></mat-tab>
-				<mat-tab label="Part Relationships"><lego-part-relationships></lego-part-relationships></mat-tab>
-				<mat-tab label="Elements"><lego-elements></lego-elements></mat-tab>
-				<mat-tab label="Colors"><lego-colors></lego-colors></mat-tab>
-				<mat-tab label="Inventory Minifigs"><lego-inventory-minifigs></lego-inventory-minifigs></mat-tab>
-				<mat-tab label="Minifigs"><lego-minifigs></lego-minifigs></mat-tab>
-				<mat-tab label="Inventory Sets"><lego-inventory-sets></lego-inventory-sets></mat-tab>
-				<mat-tab label="Sets"><lego-sets></lego-sets></mat-tab>
-				<mat-tab label="Themes"><lego-themes></lego-themes></mat-tab>
-				<mat-tab label="Users"><lego-users></lego-users></mat-tab>
-				<mat-tab label="User Parts"><lego-user-parts></lego-user-parts></mat-tab>
-				<mat-tab label="User Missing Parts"><lego-user-missing-parts></lego-user-missing-parts></mat-tab>
-				<mat-tab label="User Sets"><lego-user-sets></lego-user-sets></mat-tab>
-			</mat-tab-group>
-		</mat-tab>
-	</mat-tab-group>
+			<mat-tab label="All Tables">
+				<ng-template matTabContent>
+					<mat-tab-group class="nested-tabs" animationDuration="250ms">
+						<mat-tab label="Inventories"><ng-template matTabContent><lego-inventories></lego-inventories></ng-template></mat-tab>
+						<mat-tab label="Inventory Parts"><ng-template matTabContent><lego-inventory-parts></lego-inventory-parts></ng-template></mat-tab>
+						<mat-tab label="Parts"><ng-template matTabContent><lego-parts></lego-parts></ng-template></mat-tab>
+						<mat-tab label="Part Categories"><ng-template matTabContent><lego-part-categories></lego-part-categories></ng-template></mat-tab>
+						<mat-tab label="Part Relationships"><ng-template matTabContent><lego-part-relationships></lego-part-relationships></ng-template></mat-tab>
+						<mat-tab label="Elements"><ng-template matTabContent><lego-elements></lego-elements></ng-template></mat-tab>
+						<mat-tab label="Colors"><ng-template matTabContent><lego-colors></lego-colors></ng-template></mat-tab>
+						<mat-tab label="Inventory Minifigs"><ng-template matTabContent><lego-inventory-minifigs></lego-inventory-minifigs></ng-template></mat-tab>
+						<mat-tab label="Minifigs"><ng-template matTabContent><lego-minifigs></lego-minifigs></ng-template></mat-tab>
+						<mat-tab label="Inventory Sets"><ng-template matTabContent><lego-inventory-sets></lego-inventory-sets></ng-template></mat-tab>
+						<mat-tab label="Sets"><ng-template matTabContent><lego-sets></lego-sets></ng-template></mat-tab>
+						<mat-tab label="Themes"><ng-template matTabContent><lego-themes></lego-themes></ng-template></mat-tab>
+						<mat-tab label="Users"><ng-template matTabContent><lego-users></lego-users></ng-template></mat-tab>
+						<mat-tab label="User Parts"><ng-template matTabContent><lego-user-parts></lego-user-parts></ng-template></mat-tab>
+						<mat-tab label="User Missing Parts"><ng-template matTabContent><lego-user-missing-parts></lego-user-missing-parts></ng-template></mat-tab>
+						<mat-tab label="User Sets"><ng-template matTabContent><lego-user-sets></lego-user-sets></ng-template></mat-tab>
+					</mat-tab-group>
+				</ng-template>
+			</mat-tab>
+		</mat-tab-group>
+	</ng-container>
+
+	<ng-template #loginOnly>
+		<section class="hero-copy">
+			<h1>Sign In Required</h1>
+			<p>Please login to access the LEGO webapp.</p>
+		</section>
+		<div class="auth-gate">
+			<lego-auth-form></lego-auth-form>
+		</div>
+	</ng-template>
 </div>

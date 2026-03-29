@@ -1,0 +1,29 @@
+<div class="table-panel-shell">
+  <lego-table-form
+    [config]="config()"
+    [form]="form"
+    [loading]="loading()"
+    [getOptions]="optionsForField"
+    [getSelectSearch]="selectSearchForField"
+    [isSelectLoading]="selectLoadingForField"
+    [hasMoreOptions]="selectHasMoreForField"
+    (submitForm)="submit()"
+    (reloadTable)="reload()"
+    (selectSearch)="onSelectSearch($event.field, $event.value)"
+    (loadMore)="loadMoreOptions($event.field, $event.event)"
+  ></lego-table-form>
+
+  <mat-divider *ngIf="config().allowCreate !== false"></mat-divider>
+
+  <lego-table-catalog
+    [config]="config()"
+    [loading]="loading()"
+    [rows]="rows()"
+    [displayedColumns]="displayedColumns()"
+    [total]="total()"
+    [page]="page()"
+    [pageSize]="pageSize()"
+    [pageSizeOptions]="pageSizeOptions"
+    (pageChange)="handlePage($event)"
+  ></lego-table-catalog>
+</div>

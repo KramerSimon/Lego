@@ -1,6 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
 import inventoryRouter from './inventory/inventory.router.js';
 import inventoryPartsRouter from './inventory/inventory_parts/inventory_parts.router.js';
 import partsRouter from './inventory/inventory_parts/parts/parts.router.js';
@@ -17,10 +18,21 @@ import usersRouter from './users/users.router.js';
 import userPartsRouter from './users/user_parts/user_parts.router.js';
 import userMissingPartsRouter from './users/user_missing_parts/user_missing_parts.router.js';
 import userSetsRouter from './users/user_sets/user_sets.router.js';
+import authRouter from './auth/auth.router.js';
+import { authenticateRequest } from './auth/auth.middleware.js';
+import openApiSpec from './openapi.js';
 const app = express();
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
+app.get('/openapi.json', (request, response) => {
+  response.json(openApiSpec);
+});
+app.use('/', swaggerUi.serve);
+app.get('/', swaggerUi.setup(openApiSpec));
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
+app.use('/auth', authRouter);
+app.use(authenticateRequest);
 app.use('/inventory', inventoryRouter);
 app.use('/inventory_parts', inventoryPartsRouter);
 app.use('/sets', setsRouter);
@@ -37,9 +49,6 @@ app.use('/users', usersRouter);
 app.use('/user_parts', userPartsRouter);
 app.use('/user_missing_parts', userMissingPartsRouter);
 app.use('/user_sets', userSetsRouter);
-app.get('/', (request, response) => {
-  response.redirect('/inventory');
-});
 app.listen(3000, () => {
   console.log('Server is running on port 3000');
 });

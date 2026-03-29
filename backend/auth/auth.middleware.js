@@ -1,0 +1,34 @@
+import jwt from 'jsonwebtoken';
+
+function getJwtSecret() {
+  return process.env.AUTH_JWT_SECRET || 'lego-dev-secret-change-me';
+}
+
+function authenticateRequest(request, response, next) {
+  if (request.method === 'OPTIONS') {
+    next();
+    return;
+  }
+
+  const authHeader = String(request.headers.authorization ?? '').trim();
+  if (!authHeader.toLowerCase().startsWith('bearer ')) {
+    response.status(401).json({ error: 'Missing bearer token' });
+    return;
+  }
+
+  const token = authHeader.slice(7).trim();
+  if (!token) {
+    response.status(401).json({ error: 'Missing bearer token' });
+    return;
+  }
+
+  try {
+    const decoded = jwt.verify(token, getJwtSecret());
+    request.auth = decoded;
+    next();
+  } catch {
+    response.status(401).json({ error: 'Unauthorized' });
+  }
+}
+
+export { authenticateRequest };

@@ -1,0 +1,64 @@
+<mat-card class="entry-card" *ngIf="config().allowCreate !== false">
+  <mat-card-header>
+    <mat-card-title>Add {{ config().title }}</mat-card-title>
+    <mat-card-subtitle>Insert a new row into {{ config().endpoint }}</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <form [formGroup]="form()" class="entry-form" (ngSubmit)="onSubmit()">
+      <ng-container *ngFor="let field of config().fields">
+        <mat-form-field *ngIf="field.type !== 'checkbox'" appearance="outline">
+          <mat-label>{{ field.label }}</mat-label>
+          <input
+            *ngIf="field.type !== 'select'"
+            matInput
+            [type]="field.type === 'number' ? 'number' : 'text'"
+            [formControlName]="field.key"
+          />
+
+          <mat-select *ngIf="field.type === 'select'" [formControlName]="field.key">
+            <mat-option class="search-option" *ngIf="field.optionSource?.searchParam" disabled>
+              <div class="search-input-wrap" (click)="$event.stopPropagation()">
+                <mat-icon>search</mat-icon>
+                <input
+                  matInput
+                  placeholder="Search by set number or name"
+                  [value]="getSelectSearch()(field)"
+                  (click)="$event.stopPropagation()"
+                  (keydown)="$event.stopPropagation()"
+                  (input)="onSelectSearch(field, $any($event.target).value)"
+                />
+              </div>
+            </mat-option>
+
+            <mat-option *ngFor="let option of getOptions()(field)" [value]="option.value">
+              {{ option.label }}
+            </mat-option>
+
+            <mat-option *ngIf="hasMoreOptions()(field)" class="load-more-option">
+              <button mat-button type="button" (click)="onLoadMore(field, $event)" [disabled]="isSelectLoading()(field)">
+                <span *ngIf="!isSelectLoading()(field)">Load more</span>
+                <span *ngIf="isSelectLoading()(field)">Loading...</span>
+              </button>
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-checkbox *ngIf="field.type === 'checkbox'" [formControlName]="field.key">
+          {{ field.label }}
+        </mat-checkbox>
+      </ng-container>
+
+      <div class="form-actions">
+        <button mat-raised-button color="primary" type="submit" [disabled]="form().invalid || loading()">
+          <mat-icon>add</mat-icon>
+          Create
+        </button>
+        <button mat-stroked-button color="primary" type="button" (click)="onReload()" [disabled]="loading()">
+          <mat-icon>refresh</mat-icon>
+          Refresh Table
+        </button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>
