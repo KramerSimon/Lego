@@ -1,13 +1,14 @@
 <div class="user-sets-shell">
-	<mat-card class="entry-card">
+	<div class="section-eyebrow">Build Actions</div>
+	<mat-card class="entry-card builder-card">
 		<mat-card-header>
 			<mat-card-title>Add User Set + Parts</mat-card-title>
 			<mat-card-subtitle>Select owned parts and auto-generate missing list.</mat-card-subtitle>
 		</mat-card-header>
 
 		<mat-card-content>
-			<form [formGroup]="form" class="entry-form" (ngSubmit)="submit()">
-				<mat-form-field appearance="outline">
+			<form [formGroup]="form" class="entry-form" (ngSubmit)="submit()" data-guide-id="user-set-form">
+				<mat-form-field appearance="outline" *ngIf="isAdmin()">
 					<mat-label>User</mat-label>
 					<mat-select formControlName="user_id" panelClass="lego-select-panel">
 						<mat-option *ngFor="let user of users()" [value]="user.user_id">{{ user.label }}</mat-option>
@@ -18,13 +19,14 @@
 					<mat-label>Set</mat-label>
 					<input
 						matInput
+						data-guide-id="set-input"
 						formControlName="set_num"
 						[matAutocomplete]="setAuto"
 						(focus)="handleSetPanelOpened(true)"
 						(input)="handleSetSearchInput($any($event.target).value)"
-						placeholder="Search set number or name"
+						placeholder="Search set number, name, or year"
 					/>
-					<mat-autocomplete #setAuto="matAutocomplete">
+					<mat-autocomplete #setAuto="matAutocomplete" class="lego-select-panel">
 						<mat-option *ngIf="loadingSetOptions()" disabled>Loading sets...</mat-option>
 						<mat-option *ngFor="let set of sets()" [value]="set.set_num">
 							<div class="set-option">
@@ -38,7 +40,7 @@
 
 				<mat-form-field appearance="outline">
 					<mat-label>Quantity</mat-label>
-					<input matInput type="number" formControlName="quantity" />
+					<input matInput type="number" formControlName="quantity" data-guide-id="quantity-input" />
 				</mat-form-field>
 
 				<mat-form-field appearance="outline">
@@ -105,7 +107,14 @@
 			</div>
 
 			<div class="form-actions">
-				<button mat-raised-button color="primary" type="button" (click)="submit()" [disabled]="form.invalid || saving() || setParts().length === 0">
+				<button
+					mat-raised-button
+					color="primary"
+					type="button"
+					data-guide-id="save-user-set"
+					(click)="submit()"
+					[disabled]="form.invalid || saving() || setParts().length === 0"
+				>
 					<mat-icon>save</mat-icon>
 					Save User Set With Parts
 				</button>
@@ -119,7 +128,8 @@
 
 	<mat-divider></mat-divider>
 
-	<mat-card class="entry-card">
+	<div class="section-eyebrow">Catalog Maintenance</div>
+	<mat-card class="entry-card catalog-card">
 		<mat-card-header>
 			<mat-card-title>User Sets Catalog</mat-card-title>
 			<mat-card-subtitle>Expand a row to inspect and maintain available/missing parts.</mat-card-subtitle>
@@ -130,15 +140,44 @@
 				<mat-spinner diameter="36"></mat-spinner>
 			</div>
 
+			<div class="catalog-toolbar" *ngIf="!loadingCatalog()">
+				<button mat-button type="button" (click)="clearSort()" [disabled]="!sortColumn()">
+					<mat-icon>filter_alt_off</mat-icon>
+					Reset Sort
+				</button>
+			</div>
+
 			<div class="table-wrap" *ngIf="!loadingCatalog()">
-				<table mat-table [dataSource]="rows()" multiTemplateDataRows class="mat-elevation-z2 catalog-table">
+				<table mat-table [dataSource]="sortedCatalogRows()" multiTemplateDataRows class="mat-elevation-z2 catalog-table">
 					<ng-container *ngFor="let column of catalogColumns()" [matColumnDef]="column">
-						<th mat-header-cell *matHeaderCellDef>{{ getCatalogColumnLabel(column) }}</th>
-						<td mat-cell *matCellDef="let row" [attr.data-label]="getCatalogColumnLabel(column)">
+						<th
+							mat-header-cell
+							*matHeaderCellDef
+							[class.user-set-id-col]="column === 'user_set_id'"
+							[class.details-col]="column === 'expand'"
+						>
+							<button type="button" class="sort-toggle" (click)="toggleSort(column)">
+								<span [class.no-wrap]="column === 'user_set_id'">{{ getCatalogColumnLabel(column) }}</span>
+								<mat-icon>{{ sortIcon(column) }}</mat-icon>
+							</button>
+						</th>
+						<td
+							mat-cell
+							*matCellDef="let row"
+							[attr.data-label]="getCatalogColumnLabel(column)"
+							[class.user-set-id-col]="column === 'user_set_id'"
+							[class.details-col]="column === 'expand'"
+						>
 							<ng-container *ngIf="column === 'expand'; else plainCell">
 								<div class="catalog-actions">
-									<button mat-stroked-button class="expand-btn" type="button" (click)="toggleCatalogExpand(row); $event.stopPropagation()">
-										{{ isCatalogExpanded(row) ? 'Hide Parts' : 'Show Parts' }}
+									<button
+										mat-icon-button
+										type="button"
+										class="expand-icon-btn"
+										(click)="toggleCatalogExpand(row); $event.stopPropagation()"
+										[attr.aria-label]="isCatalogExpanded(row) ? 'Hide parts' : 'Show parts'"
+									>
+										<mat-icon>{{ isCatalogExpanded(row) ? 'expand_less' : 'visibility' }}</mat-icon>
 									</button>
 									<button
 										mat-button
@@ -165,29 +204,6 @@
 							<div class="expanded-panel" *ngIf="isCatalogExpanded(row)">
 								<div class="set-hero" *ngIf="asImageUrl(row['img_url']) as setImage">
 									<img [src]="setImage" [alt]="row['set_num']" class="set-hero-image" loading="lazy" />
-								</div>
-
-								<div class="instructions-panel">
-									<h3>Instructions</h3>
-									<div class="loader" *ngIf="instructionsLoading()">
-										<mat-spinner diameter="22"></mat-spinner>
-									</div>
-									<p class="error" *ngIf="instructionsError() && !instructionsLoading()">{{ instructionsError() }}</p>
-									<div class="instruction-list" *ngIf="!instructionsLoading() && !instructionsError() && expandedInstructions().length > 0">
-										<button
-											mat-stroked-button
-											type="button"
-											class="instruction-link"
-											*ngFor="let instruction of expandedInstructions()"
-											(click)="openInstruction(instruction, $event)"
-										>
-											<mat-icon>menu_book</mat-icon>
-											{{ instruction.name || instruction.instruction_type || instruction.source_label || 'Open link' }}
-										</button>
-									</div>
-									<p class="muted" *ngIf="!instructionsLoading() && !instructionsError() && expandedInstructions().length === 0">
-										No instruction links available for this set yet.
-									</p>
 								</div>
 
 								<div class="loader" *ngIf="breakdownLoading()">

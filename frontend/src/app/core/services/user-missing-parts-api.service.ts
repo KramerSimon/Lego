@@ -15,6 +15,8 @@ export class UserMissingPartsApiService {
       set_num?: string;
       theme_id?: number;
       search?: string;
+      sortBy?: string;
+      sortDir?: 'asc' | 'desc';
     } = {}
   ): Observable<PagedResult> {
     const params: Record<string, string | number> = { page, pageSize };
@@ -29,6 +31,12 @@ export class UserMissingPartsApiService {
     }
     if (filters.search) {
       params['search'] = filters.search;
+    }
+    if (filters.sortBy) {
+      params['sortBy'] = filters.sortBy;
+    }
+    if (filters.sortDir) {
+      params['sortDir'] = filters.sortDir;
     }
 
     return this.apiHttp.get<PagedResult>('user_missing_parts/catalog', { params });

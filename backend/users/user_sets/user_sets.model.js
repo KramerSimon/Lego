@@ -113,6 +113,23 @@ async function getAll(query = {}) {
     const { page, pageSize, offset } = database.parsePagination(query);
     const requestedUserId = Number(query.user_id);
     const hasUserFilter = Number.isFinite(requestedUserId) && requestedUserId > 0;
+    const requestedSortBy = String(query.sortBy ?? '').trim().toLowerCase();
+    const requestedSortDir = String(query.sortDir ?? '').trim().toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+    const sortWhitelist = {
+      user_set_id: 'us.user_set_id',
+      user_id: 'us.user_id',
+      set_num: 'us.set_num',
+      set_name: 's.name',
+      img_url: 's.img_url',
+      quantity: 'us.quantity',
+      condition_public: 'us.condition_public',
+      purchase_price: 'us.purchase_price',
+      owned_since: 'us.owned_since',
+      owned_complete: 'us.owned_complete'
+    };
+
+    const sortColumnSql = sortWhitelist[requestedSortBy] ?? 'us.user_set_id';
     const countSql = hasUserFilter
       ? `SELECT COUNT(*) AS total FROM ${tableName} WHERE user_id = ?`
       : `SELECT COUNT(*) AS total FROM ${tableName}`;
@@ -121,7 +138,7 @@ async function getAll(query = {}) {
       FROM ${tableName} us
       LEFT JOIN sets s ON s.set_num = us.set_num
       ${hasUserFilter ? 'WHERE us.user_id = ?' : ''}
-      ORDER BY us.${idColumn} DESC
+      ORDER BY ${sortColumnSql} ${requestedSortDir}, us.${idColumn} DESC
       LIMIT ? OFFSET ?
     `;
 

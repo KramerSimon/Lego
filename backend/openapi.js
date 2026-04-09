@@ -53,7 +53,10 @@ const openApiSpec = {
               user_id: { type: 'integer', example: 1 },
               username: { type: 'string', example: 'simon' },
               email: { type: 'string', nullable: true },
-              full_name: { type: 'string', nullable: true }
+              full_name: { type: 'string', nullable: true },
+              onboarding_guide_required: { type: 'boolean' },
+              onboarding_completed: { type: 'boolean' },
+              onboarding_completed_at: { type: 'string', format: 'date-time', nullable: true }
             }
           }
         }
@@ -191,6 +194,26 @@ const openApiSpec = {
         responses: {
           '200': {
             description: 'Current authenticated user'
+          },
+          '401': {
+            description: 'Unauthorized',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/auth/onboarding/complete': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Mark onboarding guide as completed for the current user',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Onboarding status updated'
           },
           '401': {
             description: 'Unauthorized',

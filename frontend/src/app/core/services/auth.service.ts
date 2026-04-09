@@ -87,6 +87,16 @@ export class AuthService {
     );
   }
 
+  completeOnboardingGuide() {
+    return this.api.completeOnboardingGuide().pipe(
+      tap((response) => {
+        this.setCurrentUser(response.user);
+      }),
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
   setCurrentUser(user: AuthUser): void {
     this.user.set(user);
     localStorage.setItem(USER_KEY, JSON.stringify(user));

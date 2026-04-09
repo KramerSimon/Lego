@@ -28,6 +28,8 @@ import { AuthService } from './core/services/auth.service';
 import { AuthUser } from './core/services/api-types';
 import { AccountSettingsDialogComponent } from './features/auth/components/account-settings-dialog/account-settings-dialog.component';
 import { environment } from '../environments/environment';
+import { OnboardingGuideComponent } from './shared/components/onboarding-guide/onboarding-guide.component';
+import { OnboardingGuideService } from './core/services/onboarding-guide.service';
 
 @Component({
   selector: 'lego-root',
@@ -56,16 +58,19 @@ import { environment } from '../environments/environment';
     UserPartsComponent,
     UserMissingPartsComponent,
     UserSetsComponent,
-    AuthFormComponent
+    AuthFormComponent,
+    OnboardingGuideComponent
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App {
   private static readonly THEME_KEY = 'lego_theme';
+  private readonly pickABrickUrl = 'https://www.lego.com/de-de/pick-and-build/pick-a-brick?icmp=PAB_All_Pieces';
 
   protected readonly title = 'Lego Collection Manager';
   protected readonly auth = inject(AuthService);
+  protected readonly onboardingGuide = inject(OnboardingGuideService);
   private readonly dialog = inject(MatDialog);
   protected readonly theme = signal<'light' | 'dark'>('light');
 
@@ -100,6 +105,14 @@ export class App {
       }
       this.auth.setCurrentUser(updatedUser);
     });
+  }
+
+  protected openGuide(): void {
+    this.onboardingGuide.start(false);
+  }
+
+  protected openPickABrick(): void {
+    window.open(this.pickABrickUrl, '_blank', 'noopener');
   }
 
   protected profileImageUrl(user: AuthUser | null): string | null {

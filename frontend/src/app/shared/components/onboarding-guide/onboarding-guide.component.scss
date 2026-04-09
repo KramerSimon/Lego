@@ -1,0 +1,140 @@
+.guide-root {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  pointer-events: none;
+}
+
+.mask {
+  position: fixed;
+  background: rgba(4, 10, 18, 0.5);
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+}
+
+.spotlight-frame {
+  position: fixed;
+  border-radius: 12px;
+  border: 2px solid rgba(74, 197, 220, 0.95);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2), 0 0 28px rgba(74, 197, 220, 0.35);
+  pointer-events: none;
+}
+
+.guide-card {
+  position: fixed;
+  background: var(--lego-card-bg);
+  color: var(--lego-form-ink);
+  border: 1px solid var(--lego-card-border);
+  border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  padding: 14px;
+  pointer-events: auto;
+}
+
+.guide-progress {
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--lego-card-border) 80%, transparent);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.guide-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--lego-btn-primary-bg);
+  transition: width 220ms ease;
+}
+
+.guide-icon-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(11, 114, 133, 0.16), rgba(240, 140, 0, 0.2));
+  border: 1px solid var(--lego-card-border);
+}
+
+.guide-icon-row .mat-icon {
+  color: var(--lego-form-ink);
+}
+
+.guide-arrow {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: var(--lego-card-bg);
+  border: 1px solid var(--lego-card-border);
+  transform: rotate(45deg);
+}
+
+.guide-arrow-bottom {
+  top: -8px;
+  left: 24px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.guide-arrow-top {
+  bottom: -8px;
+  left: 24px;
+  border-top: 0;
+  border-left: 0;
+}
+
+.guide-arrow-left {
+  right: -8px;
+  top: 28px;
+  border-left: 0;
+  border-bottom: 0;
+}
+
+.guide-arrow-right {
+  left: -8px;
+  top: 28px;
+  border-top: 0;
+  border-right: 0;
+}
+
+.guide-step {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lego-tab-label-active);
+}
+
+.guide-card h3 {
+  margin: 8px 0 0;
+  font-size: 1.12rem;
+}
+
+.guide-card p {
+  margin: 8px 0 0;
+  line-height: 1.45;
+  color: var(--lego-ink-soft);
+}
+
+.guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.guide-mandatory {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--lego-form-ink);
+}
+
+@media (max-width: 700px) {
+  .guide-card {
+    width: min(94vw, 460px) !important;
+  }
+}

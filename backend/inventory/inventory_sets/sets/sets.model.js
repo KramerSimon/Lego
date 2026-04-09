@@ -4,9 +4,22 @@ async function getAll(query = {}) {
     const { page, pageSize, offset } = database.parsePagination(query);
     const search = typeof query.search === 'string' ? query.search.trim() : '';
     const hasSearch = search.length > 0;
+    const requestedSortBy = String(query.sortBy ?? '').trim().toLowerCase();
+    const requestedSortDir = String(query.sortDir ?? '').trim().toLowerCase() === 'asc' ? 'ASC' : 'DESC';
     const themeIdRaw = query.themeId ?? query.theme_id;
     const themeId = Number(themeIdRaw);
     const hasThemeFilter = Number.isInteger(themeId) && themeId > 0;
+
+    const sortWhitelist = {
+      set_num: 's.set_num',
+      name: 's.name',
+      year: 's.year',
+      theme_id: 's.theme_id',
+      num_parts: 's.num_parts',
+      img_url: 's.img_url',
+      instruction_count: 'instruction_count'
+    };
+    const sortColumnSql = sortWhitelist[requestedSortBy] ?? 's.set_num';
 
     const conditions = [];
     const whereParams = [];
@@ -33,7 +46,7 @@ async function getAll(query = {}) {
           WHERE si.set_num = s.set_num
         ) AS instruction_count
       FROM sets s${whereSql.replace(/\bset_num\b/g, 's.set_num').replace(/\bname\b/g, 's.name').replace(/\btheme_id\b/g, 's.theme_id')}
-      ORDER BY s.set_num
+      ORDER BY ${sortColumnSql} ${requestedSortDir}, s.set_num ASC
       LIMIT ? OFFSET ?
     `;
 

@@ -8,7 +8,7 @@ import { TableConfig, TableField } from '../../../core/models/table-config';
 import { PagedResult } from '../../../core/services/api-types';
 import { TableApiRegistryService } from '../../../core/services/tables/table-api-registry.service';
 import { TableFormComponent } from '../table-form/table-form.component';
-import { TableCatalogComponent } from '../table-catalog/table-catalog.component';
+import { TableCatalogComponent, TableSortChange } from '../table-catalog/table-catalog.component';
 import { SelectFieldState, SelectOption } from '../table-form/table-form.models';
 
 @Component({
@@ -35,6 +35,8 @@ export class TablePanelComponent implements OnInit {
   readonly total = signal(0);
   readonly page = signal(1);
   readonly pageSize = signal(25);
+  readonly sortColumn = signal<string | null>(null);
+  readonly sortDirection = signal<'asc' | 'desc'>('asc');
   readonly displayedColumns = computed(() => this.config().displayedColumns);
   readonly pageSizeOptions = [10, 25, 50, 100, 200];
   readonly selectStates = signal<Record<string, SelectFieldState>>({});
@@ -54,7 +56,14 @@ export class TablePanelComponent implements OnInit {
 
   reload(): void {
     this.loading.set(true);
-    this.tableApiRegistry.get(this.config().endpoint).getRows(this.page(), this.pageSize()).subscribe({
+    const extraParams: Record<string, string | number> = {};
+    const sortColumn = this.sortColumn();
+    if (sortColumn) {
+      extraParams['sortBy'] = sortColumn;
+      extraParams['sortDir'] = this.sortDirection();
+    }
+
+    this.tableApiRegistry.get(this.config().endpoint).getRows(this.page(), this.pageSize(), extraParams).subscribe({
       next: (response) => {
         if (Array.isArray(response)) {
           this.rows.set(response);
@@ -98,6 +107,14 @@ export class TablePanelComponent implements OnInit {
   handlePage(event: PageEvent): void {
     this.page.set(event.pageIndex + 1);
     this.pageSize.set(event.pageSize);
+    this.reload();
+  }
+
+  handleSortChange(event: TableSortChange): void {
+    const nextColumn = event.column;
+    this.sortColumn.set(nextColumn);
+    this.sortDirection.set(event.direction);
+    this.page.set(1);
     this.reload();
   }
 
@@ -214,6 +231,10 @@ export class TablePanelComponent implements OnInit {
     const extraParams: Record<string, string | number> = {};
     if (source.searchParam && state.search) {
       extraParams[source.searchParam] = state.search;
+      const year = this.parseYear(state.search);
+      if (year !== null) {
+        extraParams['year'] = year;
+      }
     }
 
     this.selectStates.update((current) => ({
@@ -234,7 +255,10 @@ export class TablePanelComponent implements OnInit {
             const secondaryLabel = source.labelSecondaryKey ? row[source.labelSecondaryKey] : '';
             const fallbackLabel = source.labelFallbackKey ? row[source.labelFallbackKey] : '';
             const baseLabel = String(primaryLabel ?? fallbackLabel ?? row[source.valueKey] ?? 'Unknown');
-            const label = secondaryLabel ? `${baseLabel} - ${String(secondaryLabel)}` : baseLabel;
+            const year = Number(row['year']);
+            const yearSuffix = Number.isInteger(year) && year > 0 ? ` (${year})` : '';
+            const labelCore = secondaryLabel ? `${baseLabel} - ${String(secondaryLabel)}` : baseLabel;
+            const label = `${labelCore}${yearSuffix}`;
             return {
               value: row[source.valueKey],
               label
@@ -264,5 +288,17 @@ export class TablePanelComponent implements OnInit {
           this.snackBar.open(`Failed to load ${field.label} options`, 'Close', { duration: 2500 });
         }
       });
+  }
+
+  private parseYear(value: string): number | null {
+    const trimmed = value.trim();
+    if (!/^\d{4}$/.test(trimmed)) {
+      return null;
+    }
+    const year = Number(trimmed);
+    if (!Number.isInteger(year) || year < 1900 || year > 2100) {
+      return null;
+    }
+    return year;
   }
 }

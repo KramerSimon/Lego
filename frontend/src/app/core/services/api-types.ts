@@ -5,6 +5,9 @@ export interface AuthUser {
   full_name?: string;
   profile_image_url?: string | null;
   is_admin?: boolean;
+  onboarding_guide_required?: boolean;
+  onboarding_completed?: boolean;
+  onboarding_completed_at?: string | null;
 }
 
 export interface AuthLoginResponse {
@@ -142,6 +145,7 @@ export interface MissingPartCatalogRow {
   set_img_url?: string;
   theme_id?: number;
   theme_name?: string;
+  element_id?: string;
   part_num: string;
   part_name?: string;
   part_img_url?: string;

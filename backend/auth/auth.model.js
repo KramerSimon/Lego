@@ -15,7 +15,10 @@ function sanitizeUser(row) {
     email: row.email,
     full_name: row.full_name,
     profile_image_url: row.profile_image_url ?? null,
-    is_admin: Number(row.is_admin ?? 0) > 0
+    is_admin: Number(row.is_admin ?? 0) > 0,
+    onboarding_guide_required: Number(row.onboarding_guide_required ?? 0) > 0,
+    onboarding_completed: Boolean(row.onboarding_completed_at),
+    onboarding_completed_at: row.onboarding_completed_at ?? null
   };
 }
 
@@ -34,6 +37,16 @@ async function hasAdminColumn() {
   return Array.isArray(rows) && rows.length > 0;
 }
 
+async function hasOnboardingGuideRequiredColumn() {
+  const rows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['onboarding_guide_required']);
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+async function hasOnboardingCompletedAtColumn() {
+  const rows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['onboarding_completed_at']);
+  return Array.isArray(rows) && rows.length > 0;
+}
+
 async function login(identifier, password) {
   const normalizedIdentifier = String(identifier ?? '').trim();
   const rawPassword = String(password ?? '');
@@ -45,14 +58,22 @@ async function login(identifier, password) {
   const passwordColumnExists = await hasPasswordColumn();
   const profileImageColumnExists = await hasProfileImageColumn();
   const adminColumnExists = await hasAdminColumn();
+  const onboardingRequiredColumnExists = await hasOnboardingGuideRequiredColumn();
+  const onboardingCompletedAtColumnExists = await hasOnboardingCompletedAtColumn();
   if (!passwordColumnExists) {
     throw new Error('password_hash column is missing in users table');
   }
 
   const profileSelect = profileImageColumnExists ? 'profile_image_url,' : '';
   const adminSelect = adminColumnExists ? 'is_admin,' : '0 AS is_admin,';
+  const onboardingRequiredSelect = onboardingRequiredColumnExists
+    ? 'onboarding_guide_required,'
+    : '0 AS onboarding_guide_required,';
+  const onboardingCompletedAtSelect = onboardingCompletedAtColumnExists
+    ? 'onboarding_completed_at,'
+    : 'NULL AS onboarding_completed_at,';
   const sql = `
-    SELECT user_id, username, email, full_name, ${profileSelect} ${adminSelect} password_hash
+    SELECT user_id, username, email, full_name, ${profileSelect} ${adminSelect} ${onboardingRequiredSelect} ${onboardingCompletedAtSelect} password_hash
     FROM users
     WHERE username = ? OR email = ?
     LIMIT 1
@@ -104,6 +125,8 @@ async function register(payload = {}) {
   const passwordColumnExists = await hasPasswordColumn();
   const profileImageColumnExists = await hasProfileImageColumn();
   const adminColumnExists = await hasAdminColumn();
+  const onboardingRequiredColumnExists = await hasOnboardingGuideRequiredColumn();
+  const onboardingCompletedAtColumnExists = await hasOnboardingCompletedAtColumn();
 
   if (!passwordColumnExists) {
     throw new Error('password_hash column is missing in users table');
@@ -123,7 +146,12 @@ async function register(payload = {}) {
 
   const passwordHash = await bcrypt.hash(password, 12);
   const isAdmin = username.toLowerCase() === 'simon' ? 1 : 0;
-  if (profileImageColumnExists && adminColumnExists) {
+  if (profileImageColumnExists && adminColumnExists && onboardingRequiredColumnExists && onboardingCompletedAtColumnExists) {
+    await database.query(
+      'INSERT INTO users (username, email, full_name, password_hash, profile_image_url, is_admin, onboarding_guide_required, onboarding_completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [username, email, fullName || null, passwordHash, null, isAdmin, 1, null]
+    );
+  } else if (profileImageColumnExists && adminColumnExists) {
     await database.query(
       'INSERT INTO users (username, email, full_name, password_hash, profile_image_url, is_admin) VALUES (?, ?, ?, ?, ?, ?)',
       [username, email, fullName || null, passwordHash, null, isAdmin]
@@ -154,9 +182,13 @@ async function getMe(token) {
   const decoded = verifyToken(token);
   const profileImageColumnExists = await hasProfileImageColumn();
   const adminColumnExists = await hasAdminColumn();
+  const onboardingRequiredColumnExists = await hasOnboardingGuideRequiredColumn();
+  const onboardingCompletedAtColumnExists = await hasOnboardingCompletedAtColumn();
   const profileSelect = profileImageColumnExists ? 'profile_image_url' : 'NULL AS profile_image_url';
   const adminSelect = adminColumnExists ? 'is_admin' : '0 AS is_admin';
-  const sql = `SELECT user_id, username, email, full_name, ${profileSelect}, ${adminSelect} FROM users WHERE user_id = ? LIMIT 1`;
+  const onboardingRequiredSelect = onboardingRequiredColumnExists ? 'onboarding_guide_required' : '0 AS onboarding_guide_required';
+  const onboardingCompletedAtSelect = onboardingCompletedAtColumnExists ? 'onboarding_completed_at' : 'NULL AS onboarding_completed_at';
+  const sql = `SELECT user_id, username, email, full_name, ${profileSelect}, ${adminSelect}, ${onboardingRequiredSelect}, ${onboardingCompletedAtSelect} FROM users WHERE user_id = ? LIMIT 1`;
   const rows = await database.query(sql, [decoded.user_id]);
   const user = rows?.[0];
   if (!user) {
@@ -165,4 +197,21 @@ async function getMe(token) {
   return sanitizeUser(user);
 }
 
-export default { login, register, getMe };
+async function completeOnboarding(token) {
+  const decoded = verifyToken(token);
+  const onboardingRequiredColumnExists = await hasOnboardingGuideRequiredColumn();
+  const onboardingCompletedAtColumnExists = await hasOnboardingCompletedAtColumn();
+
+  if (!onboardingRequiredColumnExists || !onboardingCompletedAtColumnExists) {
+    return getMe(token);
+  }
+
+  await database.query(
+    'UPDATE users SET onboarding_guide_required = 0, onboarding_completed_at = NOW() WHERE user_id = ? LIMIT 1',
+    [decoded.user_id]
+  );
+
+  return getMe(token);
+}
+
+export default { login, register, getMe, completeOnboarding };

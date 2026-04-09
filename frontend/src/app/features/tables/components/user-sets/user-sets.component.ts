@@ -18,13 +18,12 @@ import { MatTableModule } from '@angular/material/table';
 import {
   PagedResult,
   SetPartRequirement,
-  SetInstruction,
   UserSetBreakdownPart,
   UserSetBreakdownResponse,
   UserSetPartSelection,
   UserSetWithPartsResult
 } from '../../../../core/services/api-types';
-import { SetsApiService } from '../../../../core/services/sets-api.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { UserSetsApiService } from '../../../../core/services/user-sets-api.service';
 import { SetsTableApiService, UserSetsTableApiService, UsersApiService } from '../../../../core/services/tables/table-services.service';
 import { forkJoin } from 'rxjs';
@@ -58,14 +57,16 @@ import { USER_SETS_CONFIG } from '../../config/table-definitions';
 export class UserSetsComponent implements OnInit {
   readonly config = USER_SETS_CONFIG;
   private readonly userSetsApi = inject(UserSetsApiService);
-  private readonly setsCatalogApi = inject(SetsApiService);
   private readonly userSetsTableApi = inject(UserSetsTableApiService);
   private readonly usersApi = inject(UsersApiService);
   private readonly setsApi = inject(SetsTableApiService);
+  private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private setSearchTimer: ReturnType<typeof setTimeout> | null = null;
+
+  readonly isAdmin = computed(() => Boolean(this.auth.user()?.is_admin));
 
   readonly loadingOptions = signal(false);
   readonly loadingSetOptions = signal(false);
@@ -75,6 +76,13 @@ export class UserSetsComponent implements OnInit {
   readonly setParts = signal<UserSetPartSelection[]>([]);
   readonly setSearchTerm = signal('');
   readonly users = signal<Array<{ user_id: number; label: string }>>([]);
+  readonly userLabelById = computed(() => {
+    const map: Record<number, string> = {};
+    for (const user of this.users()) {
+      map[user.user_id] = user.label;
+    }
+    return map;
+  });
   readonly sets = signal<Array<{ set_num: string; label: string; img_url?: string }>>([]);
   readonly setImageByNum = signal<Record<string, string | undefined>>({});
   readonly summary = signal<UserSetWithPartsResult['summary'] | null>(null);
@@ -86,14 +94,15 @@ export class UserSetsComponent implements OnInit {
   readonly pageSizeOptions = [10, 25, 50, 100, 200];
   readonly catalogColumns = signal<string[]>([]);
   readonly catalogDetailColumns = ['expandedDetail'];
+  readonly sortColumn = signal<string | null>(null);
+  readonly sortDirection = signal<'asc' | 'desc'>('asc');
+  readonly sortedCatalogRows = computed(() => this.rows());
 
   readonly expandedUserSetId = signal<number | null>(null);
   readonly breakdownLoading = signal(false);
   readonly breakdownError = signal<string | null>(null);
-  readonly instructionsLoading = signal(false);
-  readonly instructionsError = signal<string | null>(null);
   readonly breakdownMap = signal<Record<number, UserSetBreakdownResponse>>({});
-  readonly instructionMap = signal<Record<string, SetInstruction[]>>({});
+  readonly breakdownRequiredTotals = signal<Record<number, Record<string, number>>>({});
   readonly editedQuantities = signal<Record<string, number>>({});
   readonly updatingRowKey = signal<string | null>(null);
   readonly deletingUserSetId = signal<number | null>(null);
@@ -110,14 +119,6 @@ export class UserSetsComponent implements OnInit {
       return null;
     }
     return this.breakdownMap()[userSetId] ?? null;
-  });
-  readonly expandedInstructions = computed(() => {
-    const breakdown = this.expandedBreakdown();
-    const setNum = String(breakdown?.set_num ?? '').trim();
-    if (!setNum) {
-      return [];
-    }
-    return this.instructionMap()[setNum] ?? [];
   });
 
   readonly pendingSummary = computed(() => {
@@ -177,6 +178,7 @@ export class UserSetsComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.applyCurrentUserConstraint();
     this.loadOptions();
     this.reloadCatalog();
 
@@ -204,6 +206,43 @@ export class UserSetsComponent implements OnInit {
     this.reloadCatalog();
   }
 
+  toggleSort(column: string): void {
+    if (column === 'expand') {
+      return;
+    }
+
+    const active = this.sortColumn();
+    if (active !== column) {
+      this.sortColumn.set(column);
+      this.sortDirection.set('asc');
+      this.page.set(1);
+      this.reloadCatalog();
+      return;
+    }
+
+    this.sortDirection.set(this.sortDirection() === 'asc' ? 'desc' : 'asc');
+    this.page.set(1);
+    this.reloadCatalog();
+  }
+
+  sortIcon(column: string): string {
+    if (this.sortColumn() !== column) {
+      return 'unfold_more';
+    }
+    return this.sortDirection() === 'asc' ? 'north' : 'south';
+  }
+
+  clearSort(): void {
+    if (!this.sortColumn()) {
+      return;
+    }
+
+    this.sortColumn.set(null);
+    this.sortDirection.set('asc');
+    this.page.set(1);
+    this.reloadCatalog();
+  }
+
   handleSetPanelOpened(opened: boolean): void {
     if (opened) {
       this.setSearchTerm.set('');
@@ -220,19 +259,15 @@ export class UserSetsComponent implements OnInit {
     if (this.expandedUserSetId() === userSetId) {
       this.expandedUserSetId.set(null);
       this.breakdownError.set(null);
-      this.instructionsError.set(null);
       return;
     }
 
     this.expandedUserSetId.set(userSetId);
     this.breakdownError.set(null);
-    this.instructionsError.set(null);
-
-    const setNum = String(row['set_num'] ?? '').trim();
-    this.loadInstructionsForSet(setNum);
 
     const cached = this.breakdownMap()[userSetId];
     if (cached) {
+      this.ensureBreakdownRequiredTotals(userSetId, String(cached.set_num ?? ''));
       return;
     }
 
@@ -244,8 +279,7 @@ export class UserSetsComponent implements OnInit {
           ...current,
           [userSetId]: response
         }));
-        const responseSetNum = String(response?.set_num ?? '').trim();
-        this.loadInstructionsForSet(responseSetNum);
+        this.ensureBreakdownRequiredTotals(userSetId, String(response.set_num ?? ''));
       },
       error: () => {
         this.breakdownLoading.set(false);
@@ -287,6 +321,10 @@ export class UserSetsComponent implements OnInit {
   }
 
   formatCatalogCell(column: string, value: unknown): unknown {
+    if (column === 'user_id') {
+      return this.getUserLabel(value);
+    }
+
     if (column !== 'owned_complete') {
       return value;
     }
@@ -322,24 +360,107 @@ export class UserSetsComponent implements OnInit {
 
   setEditableQuantity(kind: 'available' | 'missing', row: UserSetBreakdownPart, rawValue: string): void {
     const nextValue = Number(rawValue);
-    const safeValue = Number.isFinite(nextValue) && nextValue >= 0 ? nextValue : 0;
+    const safeValue = Number.isFinite(nextValue) && nextValue >= 0 ? Math.round(nextValue) : 0;
     const key = this.getRowActionKey(kind, row.row_id);
+    const breakdown = this.expandedBreakdown();
+    const userSetId = this.expandedUserSetId();
+    if (!breakdown || !userSetId) {
+      this.editedQuantities.update((current) => ({
+        ...current,
+        [key]: safeValue
+      }));
+      return;
+    }
+
+    const counterpart = this.findCounterpartPart(kind, row, breakdown);
+    if (!counterpart) {
+      this.editedQuantities.update((current) => ({
+        ...current,
+        [key]: safeValue
+      }));
+      return;
+    }
+
+    const pairKey = this.buildBreakdownKey(row.part_num, row.color_id);
+    const requiredTotal = this.resolveRequiredTotalForPair(userSetId, pairKey, kind, row, counterpart);
+
+    if (kind === 'available') {
+      const nextAvailable = Math.max(0, Math.min(requiredTotal, safeValue));
+      const nextMissing = Math.max(0, requiredTotal - nextAvailable);
+      const counterpartKey = this.getRowActionKey('missing', counterpart.row_id);
+      this.editedQuantities.update((current) => ({
+        ...current,
+        [key]: nextAvailable,
+        [counterpartKey]: nextMissing
+      }));
+      return;
+    }
+
+    const nextMissing = Math.max(0, Math.min(requiredTotal, safeValue));
+    const nextAvailable = Math.max(0, requiredTotal - nextMissing);
+    const counterpartKey = this.getRowActionKey('available', counterpart.row_id);
     this.editedQuantities.update((current) => ({
       ...current,
-      [key]: safeValue
+      [key]: nextMissing,
+      [counterpartKey]: nextAvailable
     }));
   }
 
   saveBreakdownQuantity(kind: 'available' | 'missing', row: UserSetBreakdownPart): void {
     const userSetId = this.expandedUserSetId();
-    if (!userSetId) {
+    const breakdown = this.expandedBreakdown();
+    if (!userSetId || !breakdown) {
       return;
     }
+
+    const counterpart = this.findCounterpartPart(kind, row, breakdown);
     const rowKey = this.getRowActionKey(kind, row.row_id);
     const quantity = this.getEditableQuantity(kind, row);
+
+    if (!counterpart) {
+      this.updatingRowKey.set(rowKey);
+
+      this.userSetsApi.updateBreakdownPart(userSetId, kind, row.row_id, quantity).subscribe({
+        next: () => {
+          this.updatingRowKey.set(null);
+          this.breakdownMap.update((current) => {
+            const existing = current[userSetId];
+            if (!existing) {
+              return current;
+            }
+            const next = { ...existing };
+            if (kind === 'available') {
+              next.available_parts = existing.available_parts.map((part) => (
+                part.row_id === row.row_id ? { ...part, quantity } : part
+              ));
+            } else {
+              next.missing_parts = existing.missing_parts.map((part) => (
+                part.row_id === row.row_id ? { ...part, quantity } : part
+              ));
+            }
+            return {
+              ...current,
+              [userSetId]: next
+            };
+          });
+          this.snackBar.open('Part quantity updated.', 'Close', { duration: 1800 });
+        },
+        error: () => {
+          this.updatingRowKey.set(null);
+          this.snackBar.open('Failed to update part quantity.', 'Close', { duration: 2600 });
+        }
+      });
+      return;
+    }
+
+    const counterpartKind: 'available' | 'missing' = kind === 'available' ? 'missing' : 'available';
+    const counterpartQuantity = this.getEditableQuantity(counterpartKind, counterpart);
     this.updatingRowKey.set(rowKey);
 
-    this.userSetsApi.updateBreakdownPart(userSetId, kind, row.row_id, quantity).subscribe({
+    forkJoin([
+      this.userSetsApi.updateBreakdownPart(userSetId, kind, row.row_id, quantity),
+      this.userSetsApi.updateBreakdownPart(userSetId, counterpartKind, counterpart.row_id, counterpartQuantity)
+    ]).subscribe({
       next: () => {
         this.updatingRowKey.set(null);
         this.breakdownMap.update((current) => {
@@ -348,25 +469,34 @@ export class UserSetsComponent implements OnInit {
             return current;
           }
           const next = { ...existing };
-          if (kind === 'available') {
-            next.available_parts = existing.available_parts.map((part) => (
-              part.row_id === row.row_id ? { ...part, quantity } : part
-            ));
-          } else {
-            next.missing_parts = existing.missing_parts.map((part) => (
-              part.row_id === row.row_id ? { ...part, quantity } : part
-            ));
-          }
+          next.available_parts = existing.available_parts.map((part) => {
+            if (part.row_id === row.row_id && kind === 'available') {
+              return { ...part, quantity };
+            }
+            if (part.row_id === counterpart.row_id && counterpartKind === 'available') {
+              return { ...part, quantity: counterpartQuantity };
+            }
+            return part;
+          });
+          next.missing_parts = existing.missing_parts.map((part) => {
+            if (part.row_id === row.row_id && kind === 'missing') {
+              return { ...part, quantity };
+            }
+            if (part.row_id === counterpart.row_id && counterpartKind === 'missing') {
+              return { ...part, quantity: counterpartQuantity };
+            }
+            return part;
+          });
           return {
             ...current,
             [userSetId]: next
           };
         });
-        this.snackBar.open('Part quantity updated.', 'Close', { duration: 1800 });
+        this.snackBar.open('Available and missing quantities balanced and saved.', 'Close', { duration: 2200 });
       },
       error: () => {
         this.updatingRowKey.set(null);
-        this.snackBar.open('Failed to update part quantity.', 'Close', { duration: 2600 });
+        this.snackBar.open('Failed to save balanced quantities.', 'Close', { duration: 2600 });
       }
     });
   }
@@ -480,7 +610,10 @@ export class UserSetsComponent implements OnInit {
 
     const raw = this.form.getRawValue();
     const setNum = (raw.set_num ?? '').trim();
-    const userId = Number(raw.user_id);
+    const currentUser = this.auth.user();
+    const userId = (!this.isAdmin() && currentUser)
+      ? Number(currentUser.user_id)
+      : Number(raw.user_id);
     const quantity = Number(raw.quantity ?? 1);
     const purchasePrice = raw.purchase_price;
 
@@ -535,6 +668,23 @@ export class UserSetsComponent implements OnInit {
 
   private loadOptions(): void {
     this.loadingOptions.set(true);
+
+    const currentUser = this.auth.user();
+    if (!this.isAdmin() && currentUser) {
+      this.users.set([{
+        user_id: Number(currentUser.user_id),
+        label: this.buildUserSummaryLabel({
+          full_name: currentUser.full_name,
+          username: currentUser.username,
+          email: currentUser.email,
+          user_id: currentUser.user_id
+        })
+      }]);
+      this.loadingOptions.set(false);
+      this.searchSetOptions('');
+      return;
+    }
+
     forkJoin([
       this.usersApi.getRows(1, 500)
     ]).subscribe({
@@ -543,7 +693,7 @@ export class UserSetsComponent implements OnInit {
 
       this.users.set(userRows.map((row) => ({
         user_id: Number(row['user_id']),
-        label: String(row['username'] ?? row['email'] ?? row['user_id'])
+        label: this.buildUserSummaryLabel(row)
       })).filter((row) => Number.isFinite(row.user_id) && row.user_id > 0));
 
       this.loadingOptions.set(false);
@@ -556,11 +706,30 @@ export class UserSetsComponent implements OnInit {
     });
   }
 
+  private applyCurrentUserConstraint(): void {
+    const currentUser = this.auth.user();
+    if (!currentUser) {
+      return;
+    }
+
+    if (!currentUser.is_admin) {
+      this.form.controls.user_id.setValue(Number(currentUser.user_id), { emitEvent: false });
+      this.form.controls.user_id.disable({ emitEvent: false });
+      return;
+    }
+
+    this.form.controls.user_id.enable({ emitEvent: false });
+  }
+
   private searchSetOptions(searchTerm: string): void {
     const normalized = searchTerm.trim();
     const extraParams: Record<string, string | number> = {};
     if (normalized) {
       extraParams['search'] = normalized;
+      const searchYear = this.parseYear(normalized);
+      if (searchYear !== null) {
+        extraParams['year'] = searchYear;
+      }
     }
 
     this.loadingSetOptions.set(true);
@@ -590,10 +759,12 @@ export class UserSetsComponent implements OnInit {
       .map((row) => {
         const setNum = String(row['set_num'] ?? '').trim();
         const setName = String(row['name'] ?? '').trim();
+        const year = Number(row['year']);
+        const yearLabel = Number.isInteger(year) && year > 0 ? ` (${year})` : '';
         const rawImage = row['img_url'];
         return {
           set_num: setNum,
-          label: setName ? `${setNum} - ${setName}` : setNum,
+          label: setName ? `${setNum} - ${setName}${yearLabel}` : `${setNum}${yearLabel}`,
           img_url: typeof rawImage === 'string' ? rawImage : undefined
         };
       })
@@ -630,7 +801,13 @@ export class UserSetsComponent implements OnInit {
 
   private reloadCatalog(): void {
     this.loadingCatalog.set(true);
-    this.userSetsTableApi.getRows(this.page(), this.pageSize()).subscribe({
+    const sortColumn = this.resolveServerSortColumn(this.sortColumn());
+    const sortDirection = this.sortDirection();
+
+    this.userSetsTableApi.getRows(this.page(), this.pageSize(), {
+      ...(sortColumn ? { sortBy: sortColumn } : {}),
+      sortDir: sortDirection
+    }).subscribe({
       next: (response) => {
         this.loadingCatalog.set(false);
         const resolvedRows = Array.isArray(response)
@@ -717,15 +894,99 @@ export class UserSetsComponent implements OnInit {
   }
 
   private buildCatalogColumns(rows: Record<string, unknown>[]): string[] {
-    const preferred = ['user_set_id', 'user_id', 'set_num', 'set_name', 'img_url', 'quantity'];
+    const preferred = ['user_id', 'set_num', 'set_name', 'img_url', 'quantity'];
     if (!rows.length) {
       return [...preferred, 'expand'];
     }
 
-    const keys = Object.keys(rows[0]).filter((key) => key !== 'notes');
+    const keys = Object.keys(rows[0]).filter((key) => key !== 'notes' && key !== 'user_set_id');
     const ordered = preferred.filter((key) => keys.includes(key));
     const tail = keys.filter((key) => !ordered.includes(key));
     return [...ordered, ...tail, 'expand'];
+  }
+
+  private resolveCatalogSetQuantity(userSetId: number): number {
+    const row = this.rows().find((item) => Number(item['user_set_id']) === userSetId);
+    const raw = Number(row?.['quantity'] ?? 1);
+    if (!Number.isFinite(raw) || raw <= 0) {
+      return 1;
+    }
+    return Math.max(1, Math.round(raw));
+  }
+
+  private ensureBreakdownRequiredTotals(userSetId: number, setNumRaw: string): void {
+    const setNum = String(setNumRaw ?? '').trim();
+    if (!setNum) {
+      return;
+    }
+
+    const existingMap = this.breakdownRequiredTotals()[userSetId];
+    if (existingMap && Object.keys(existingMap).length > 0) {
+      return;
+    }
+
+    const setQuantity = this.resolveCatalogSetQuantity(userSetId);
+    this.userSetsApi.getSetParts(setNum).subscribe({
+      next: (response) => {
+        const requirements = Array.isArray(response.parts) ? response.parts : [];
+        const totals: Record<string, number> = {};
+        for (const requirement of requirements) {
+          const partNum = String(requirement.part_num ?? '').trim();
+          const colorId = Number(requirement.color_id ?? 0);
+          const requiredBase = Number(requirement.required_quantity ?? 0);
+          if (!partNum || !Number.isFinite(colorId) || colorId <= 0 || !Number.isFinite(requiredBase) || requiredBase <= 0) {
+            continue;
+          }
+          const key = this.buildBreakdownKey(partNum, colorId);
+          const requiredTotal = Math.max(0, Math.round(requiredBase * setQuantity));
+          totals[key] = (totals[key] ?? 0) + requiredTotal;
+        }
+
+        this.breakdownRequiredTotals.update((current) => ({
+          ...current,
+          [userSetId]: totals
+        }));
+      }
+    });
+  }
+
+  private findCounterpartPart(
+    kind: 'available' | 'missing',
+    row: UserSetBreakdownPart,
+    breakdown: UserSetBreakdownResponse
+  ): UserSetBreakdownPart | null {
+    const targetList = kind === 'available' ? breakdown.missing_parts : breakdown.available_parts;
+    const partNum = String(row.part_num ?? '').trim();
+    const colorId = Number(row.color_id);
+    const counterpart = targetList.find((item) => {
+      return String(item.part_num ?? '').trim() === partNum && Number(item.color_id) === colorId;
+    });
+    return counterpart ?? null;
+  }
+
+  private resolveRequiredTotalForPair(
+    userSetId: number,
+    pairKey: string,
+    kind: 'available' | 'missing',
+    row: UserSetBreakdownPart,
+    counterpart: UserSetBreakdownPart
+  ): number {
+    const requirementMap = this.breakdownRequiredTotals()[userSetId] ?? {};
+    const requiredFromSource = Number(requirementMap[pairKey]);
+    if (Number.isFinite(requiredFromSource) && requiredFromSource >= 0) {
+      return Math.max(0, Math.round(requiredFromSource));
+    }
+
+    if (kind === 'available') {
+      return Math.max(0, this.getEditableQuantity('available', row) + this.getEditableQuantity('missing', counterpart));
+    }
+    return Math.max(0, this.getEditableQuantity('available', counterpart) + this.getEditableQuantity('missing', row));
+  }
+
+  private buildBreakdownKey(partNum: unknown, colorId: unknown): string {
+    const normalizedPartNum = String(partNum ?? '').trim().toLowerCase();
+    const normalizedColorId = Number(colorId);
+    return `${normalizedPartNum}:${Number.isFinite(normalizedColorId) ? normalizedColorId : 0}`;
   }
 
   private getRowActionKey(kind: 'available' | 'missing', rowId: number): string {
@@ -746,86 +1007,130 @@ export class UserSetsComponent implements OnInit {
     return null;
   }
 
-  openInstruction(instruction: SetInstruction | unknown, event?: Event): void {
-    if (event) {
-      event.stopPropagation();
+  private getSortValue(row: Record<string, unknown>, column: string): unknown {
+    if (column === 'expand') {
+      return String(row['set_num'] ?? row['user_set_id'] ?? '');
     }
-    const href = this.resolveInstructionUrl(instruction);
-    if (!href) {
-      return;
+    if (column === 'user_id') {
+      return this.getUserLabel(row[column]);
     }
-    window.open(href, '_blank', 'noopener');
+    if (column === 'owned_complete') {
+      const formatted = this.formatCatalogCell(column, row[column]);
+      return formatted;
+    }
+    return row[column];
   }
 
-  private resolveInstructionUrl(instruction: SetInstruction | unknown): string | null {
-    const maybeInstruction = (instruction && typeof instruction === 'object')
-      ? (instruction as Partial<SetInstruction>)
-      : null;
+  private getUserLabel(value: unknown): string {
+    const userId = Number(value);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return String(value ?? '');
+    }
+    return this.userLabelById()[userId] ?? `User #${userId}`;
+  }
 
-    const setNum = String(maybeInstruction?.set_num ?? '').trim();
-    const searchString = this.toLegoSearchString(setNum);
-    const source = String(maybeInstruction?.source ?? '').toLowerCase();
-    const type = String(maybeInstruction?.instruction_type ?? '').toLowerCase();
-    const rawUrl = this.asImageUrl(maybeInstruction?.url ?? instruction);
+  private buildUserSummaryLabel(row: Record<string, unknown> | { [key: string]: unknown }): string {
+    const fullName = String(row['full_name'] ?? '').trim();
+    const username = String(row['username'] ?? '').trim();
+    const email = String(row['email'] ?? '').trim();
 
-    if ((source === 'lego' || type === 'instructions-search') && searchString) {
-      if (!rawUrl) {
-        return this.buildLegoSearchUrl(searchString);
+    if (fullName && username) {
+      return `${fullName} (${username})`;
+    }
+    if (fullName) {
+      return fullName;
+    }
+    if (username && email) {
+      return `${username} (${email})`;
+    }
+    if (username) {
+      return username;
+    }
+    if (email) {
+      return email;
+    }
+
+    return `User #${String(row['user_id'] ?? '')}`;
+  }
+
+  private parseYear(value: string): number | null {
+    const trimmed = value.trim();
+    if (!/^\d{4}$/.test(trimmed)) {
+      return null;
+    }
+    const year = Number(trimmed);
+    if (!Number.isInteger(year) || year < 1900 || year > 2100) {
+      return null;
+    }
+    return year;
+  }
+
+  private compareValues(left: unknown, right: unknown): number {
+    const leftNumber = this.toNumber(left);
+    const rightNumber = this.toNumber(right);
+    if (leftNumber !== null && rightNumber !== null) {
+      return leftNumber - rightNumber;
+    }
+
+    const leftTime = this.toTimestamp(left);
+    const rightTime = this.toTimestamp(right);
+    if (leftTime !== null && rightTime !== null) {
+      return leftTime - rightTime;
+    }
+
+    return String(left ?? '').localeCompare(String(right ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+  }
+
+  private toNumber(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const normalized = value.trim();
+      if (!normalized) {
+        return null;
       }
-
-      try {
-        const parsed = new URL(rawUrl);
-        parsed.pathname = '/en-us/service/building-instructions/search-results';
-        parsed.searchParams.set('searchString', searchString);
-        parsed.searchParams.set('page', '1');
-        return parsed.toString();
-      } catch {
-        return this.buildLegoSearchUrl(searchString);
+      const numeric = Number(normalized);
+      if (Number.isFinite(numeric)) {
+        return numeric;
       }
     }
-
-    return rawUrl;
+    return null;
   }
 
-  private buildLegoSearchUrl(searchString: string): string {
-    return `https://www.lego.com/en-us/service/building-instructions/search-results?searchString=${encodeURIComponent(searchString)}&page=1`;
+  private toTimestamp(value: unknown): number | null {
+    if (typeof value !== 'string') {
+      return null;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const timestamp = Date.parse(trimmed);
+    if (Number.isNaN(timestamp)) {
+      return null;
+    }
+    return timestamp;
   }
 
-  private toLegoSearchString(setNum: string): string {
-    const normalized = String(setNum ?? '').trim();
-    if (!normalized) {
-      return '';
-    }
-    const dashIndex = normalized.indexOf('-');
-    if (dashIndex <= 0) {
-      return normalized;
-    }
-    return normalized.slice(0, dashIndex);
-  }
-
-  private loadInstructionsForSet(setNum: string): void {
-    if (!setNum) {
-      return;
+  private resolveServerSortColumn(column: string | null): string | null {
+    if (!column || column === 'expand') {
+      return null;
     }
 
-    const cached = this.instructionMap()[setNum];
-    if (cached) {
-      return;
-    }
+    const allowedColumns = new Set([
+      'user_set_id',
+      'user_id',
+      'set_num',
+      'set_name',
+      'img_url',
+      'quantity',
+      'condition_public',
+      'purchase_price',
+      'owned_since',
+      'owned_complete'
+    ]);
 
-    this.instructionsLoading.set(true);
-    this.setsCatalogApi.getCatalogSetInstructions(setNum).subscribe({
-      next: (response) => {
-        this.instructionsLoading.set(false);
-        this.instructionMap.update((current) => ({
-          ...current,
-          [setNum]: Array.isArray(response.instructions) ? response.instructions : []
-        }));
-      },
-      error: () => {
-        this.instructionsLoading.set(false);
-        this.instructionsError.set('Failed to load instruction links.');
-      }
-    });
+    return allowedColumns.has(column) ? column : null;
   }
 }

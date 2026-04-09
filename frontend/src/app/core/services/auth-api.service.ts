@@ -19,6 +19,10 @@ export class AuthApiService {
     return this.apiHttp.post<AuthLoginResponse>('auth/register', payload);
   }
 
+  completeOnboardingGuide(): Observable<{ user: AuthUser }> {
+    return this.apiHttp.post<{ user: AuthUser }>('auth/onboarding/complete', {});
+  }
+
   me(token: string): Observable<{ user: AuthUser }> {
     return this.apiHttp.get<{ user: AuthUser }>('auth/me', {
       headers: new HttpHeaders({

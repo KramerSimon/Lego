@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { AuthService } from '../../../../core/services/auth.service';
+import { OnboardingGuideService } from '../../../../core/services/onboarding-guide.service';
 
 @Component({
   selector: 'lego-auth-form',
@@ -26,6 +27,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 export class AuthFormComponent {
   private readonly fb = inject(FormBuilder);
   readonly auth = inject(AuthService);
+  private readonly onboardingGuide = inject(OnboardingGuideService);
 
   readonly mode = signal<'login' | 'register'>('login');
   readonly error = signal<string | null>(null);
@@ -105,6 +107,9 @@ export class AuthFormComponent {
         this.error.set(this.auth.authError() ?? 'Registration failed. Try again.');
         return;
       }
+
+      this.onboardingGuide.startMandatoryGuide();
+
       this.registerForm.controls.password.setValue('');
       this.registerForm.controls.confirm_password.setValue('');
     });

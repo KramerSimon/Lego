@@ -9,6 +9,7 @@ const connectionProperties = {
 class Database {
   constructor() {
     this.pool = mysql.createPool(connectionProperties);
+    this.tableColumnsCache = new Map();
   }
 
   query(sql, params) {
@@ -86,10 +87,50 @@ class Database {
     return { page, pageSize, offset };
   }
 
+  normalizeSortDirection(value) {
+    const raw = String(value ?? '').trim().toLowerCase();
+    return raw === 'asc' ? 'ASC' : 'DESC';
+  }
+
+  sanitizeSortColumn(value) {
+    const column = String(value ?? '').trim();
+    if (!column) {
+      return null;
+    }
+    return /^[a-zA-Z0-9_]+$/.test(column) ? column : null;
+  }
+
+  async getTableColumns(tableName) {
+    if (this.tableColumnsCache.has(tableName)) {
+      return this.tableColumnsCache.get(tableName);
+    }
+
+    const rows = await this.query(`SHOW COLUMNS FROM ${tableName}`);
+    const columns = new Set(
+      (rows ?? [])
+        .map((row) => String(row?.Field ?? '').trim())
+        .filter((name) => name.length > 0)
+    );
+
+    this.tableColumnsCache.set(tableName, columns);
+    return columns;
+  }
+
   async paginateTable(tableName, query = {}) {
     const { page, pageSize, offset } = this.parsePagination(query);
+    const sortBy = this.sanitizeSortColumn(query.sortBy);
+    const sortDir = this.normalizeSortDirection(query.sortDir);
+    let orderBySql = '';
+
+    if (sortBy) {
+      const columns = await this.getTableColumns(tableName);
+      if (columns.has(sortBy)) {
+        orderBySql = ` ORDER BY ${sortBy} ${sortDir}`;
+      }
+    }
+
     const countSql = `SELECT COUNT(*) AS total FROM ${tableName}`;
-    const dataSql = `SELECT * FROM ${tableName} LIMIT ? OFFSET ?`;
+    const dataSql = `SELECT * FROM ${tableName}${orderBySql} LIMIT ? OFFSET ?`;
 
     const [countRows, dataRows] = await Promise.all([
       this.query(countSql),

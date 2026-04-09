@@ -1,0 +1,51 @@
+<ng-container *ngIf="guide.isOpen()">
+  <div class="guide-root" role="dialog" aria-modal="true" aria-label="Onboarding guide">
+    <div class="mask" [ngStyle]="topMaskStyle()"></div>
+    <div class="mask" [ngStyle]="bottomMaskStyle()"></div>
+    <div class="mask" [ngStyle]="leftMaskStyle()"></div>
+    <div class="mask" [ngStyle]="rightMaskStyle()"></div>
+
+    <div class="spotlight-frame" [ngStyle]="spotlightStyle()"></div>
+
+    <section class="guide-card" [ngStyle]="tooltipStyle()">
+      <div class="guide-progress" aria-hidden="true">
+        <div class="guide-progress-bar" [style.width.%]="progressPercent()"></div>
+      </div>
+      <div class="guide-icon-row">
+        <mat-icon>{{ activeIcon() }}</mat-icon>
+      </div>
+      <div class="guide-arrow" [class]="'guide-arrow ' + pointerClass()" aria-hidden="true"></div>
+      <p class="guide-step">Step {{ stepLabel() }}</p>
+      <h3>{{ activeStep().title || 'Guide' }}</h3>
+      <p>{{ activeStep().description || 'Follow this guide to navigate the app.' }}</p>
+
+      <div class="guide-actions">
+        <button mat-stroked-button type="button" (click)="previousStep()" [disabled]="!canGoBack()">Back</button>
+        <button
+          mat-stroked-button
+          type="button"
+          *ngIf="!guide.isMandatory()"
+          (click)="closeGuide()"
+        >
+          Close
+        </button>
+        <button
+          mat-raised-button
+          color="primary"
+          type="button"
+          *ngIf="guide.currentStepIndex() < guide.steps().length - 1; else finishBtn"
+          (click)="nextStep()"
+        >
+          Next
+        </button>
+        <ng-template #finishBtn>
+          <button mat-raised-button color="primary" type="button" (click)="finishGuide()">Finish</button>
+        </ng-template>
+      </div>
+
+      <p class="guide-mandatory" *ngIf="guide.isMandatory()">
+        This guide is required for new accounts. Complete all steps to continue.
+      </p>
+    </section>
+  </div>
+</ng-container>

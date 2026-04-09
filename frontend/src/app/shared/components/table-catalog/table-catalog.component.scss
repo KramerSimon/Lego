@@ -1,3 +1,35 @@
+.catalog-search {
+  width: min(440px, 100%);
+  margin-bottom: 10px;
+}
+
+.sort-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+}
+
+.sort-toggle span {
+  display: inline;
+  line-height: 1.2;
+}
+
+.sort-toggle .mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
 .table-thumb {
   width: 52px;
   height: 52px;

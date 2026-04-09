@@ -5,15 +5,15 @@
 	</mat-card-header>
 
 	<mat-card-content>
-		<div class="search-bar">
+		<div class="search-bar" data-guide-id="set-catalog-filters">
 			<mat-form-field appearance="outline" class="search-field">
-				<mat-label>Search by set number or name</mat-label>
+				<mat-label>Search by set number, name, or year</mat-label>
 				<input
 					matInput
 					[ngModel]="searchTerm()"
-					(ngModelChange)="searchTerm.set($event)"
-					(keyup.enter)="applySearch()"
-					placeholder="e.g. 10283 or NASA"
+					(ngModelChange)="handleSearchInput($event)"
+					data-guide-id="set-catalog-search"
+					placeholder="e.g. 10283, NASA, or 2022"
 				/>
 			</mat-form-field>
 
@@ -24,9 +24,10 @@
 					[ngModel]="themeSearchTerm()"
 					(ngModelChange)="handleThemeSearchInput($event)"
 					[matAutocomplete]="themeAuto"
+					data-guide-id="set-catalog-theme"
 					placeholder="All themes"
 				/>
-				<mat-autocomplete #themeAuto="matAutocomplete" (optionSelected)="selectTheme($any($event.option.value))">
+				<mat-autocomplete #themeAuto="matAutocomplete" class="lego-select-panel" (optionSelected)="selectTheme($any($event.option.value))">
 					<mat-option [value]="null">All themes</mat-option>
 					<mat-option *ngFor="let theme of filteredThemeOptions()" [value]="theme.id">
 						{{ theme.name }}
@@ -36,8 +37,8 @@
 			</mat-form-field>
 
 			<div class="search-actions">
-				<button mat-stroked-button type="button" (click)="applySearch()">Apply Filters</button>
 				<button mat-button type="button" (click)="clearSearch()">Clear</button>
+				<button mat-button type="button" (click)="clearSort()" [disabled]="!sortColumn()">Reset Sort</button>
 			</div>
 		</div>
 
@@ -45,10 +46,15 @@
 			<mat-spinner diameter="36"></mat-spinner>
 		</div>
 
-		<div class="table-wrap" *ngIf="!loading()">
-			<table mat-table [dataSource]="rows()" multiTemplateDataRows class="mat-elevation-z2">
+		<div class="table-wrap" *ngIf="!loading()" data-guide-id="set-catalog-table">
+			<table mat-table [dataSource]="sortedRows()" multiTemplateDataRows class="mat-elevation-z2">
 				<ng-container *ngFor="let column of displayedColumns" [matColumnDef]="column">
-					<th mat-header-cell *matHeaderCellDef>{{ getColumnLabel(column) }}</th>
+					<th mat-header-cell *matHeaderCellDef>
+						<button type="button" class="sort-toggle" (click)="toggleSort(column)">
+							<span>{{ getColumnLabel(column) }}</span>
+							<mat-icon>{{ sortIcon(column) }}</mat-icon>
+						</button>
+					</th>
 					<td mat-cell *matCellDef="let row" [attr.data-label]="getColumnLabel(column)">
 						<ng-container *ngIf="column === 'expand'; else regularCell">
 							<button mat-stroked-button class="expand-btn" type="button" (click)="toggleExpand(row); $event.stopPropagation()">
@@ -65,7 +71,7 @@
 									loading="lazy"
 								/>
 							</ng-container>
-							<ng-template #plainValue>{{ row[column] }}</ng-template>
+							<ng-template #plainValue>{{ displayCellValue(column, row[column]) }}</ng-template>
 						</ng-template>
 					</td>
 				</ng-container>
@@ -75,33 +81,6 @@
 						<div class="expanded-panel" *ngIf="isExpanded(row)">
 							<div class="set-hero" *ngIf="asImageUrl(row['img_url']) as setImage">
 								<img [src]="setImage" [alt]="row['name'] || row['set_num'] || 'Set image'" class="set-hero-image" loading="lazy" />
-							</div>
-
-							<div class="instructions-panel">
-								<h3>Instructions</h3>
-
-								<div class="loader" *ngIf="expandedInstructionsLoading()">
-									<mat-spinner diameter="22"></mat-spinner>
-								</div>
-
-								<p class="error" *ngIf="expandedInstructionsError() && !expandedInstructionsLoading()">{{ expandedInstructionsError() }}</p>
-
-								<div class="instruction-list" *ngIf="!expandedInstructionsLoading() && !expandedInstructionsError() && expandedInstructions().length > 0">
-									<button
-										mat-stroked-button
-										type="button"
-										class="instruction-link"
-										*ngFor="let instruction of expandedInstructions()"
-										(click)="openInstruction(instruction, $event)"
-									>
-										<mat-icon>menu_book</mat-icon>
-										{{ instruction.name || instruction.instruction_type || instruction.source_label || 'Open link' }}
-									</button>
-								</div>
-
-								<p class="muted" *ngIf="!expandedInstructionsLoading() && !expandedInstructionsError() && expandedInstructions().length === 0">
-									No instruction links available for this set yet.
-								</p>
 							</div>
 
 							<h3>Parts for {{ row['set_num'] }}</h3>

@@ -1,6 +1,15 @@
 .user-sets-shell {
   display: grid;
-  gap: 16px;
+  gap: 12px;
+}
+
+.section-eyebrow {
+  margin: 2px 4px -2px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 700;
+  color: var(--lego-form-label);
 }
 
 .entry-card {
@@ -8,6 +17,14 @@
   background: #ffffff;
   border: 1px solid #d7e5eb;
   box-shadow: 0 6px 22px rgba(15, 23, 42, 0.08);
+}
+
+.builder-card {
+  background: linear-gradient(180deg, #fbfeff 0%, #ffffff 100%);
+}
+
+.catalog-card {
+  border-color: #cfe0e8;
 }
 
 mat-card-title {
@@ -275,16 +292,48 @@ button[mat-stroked-button][disabled] {
   min-width: 700px;
 }
 
+.sort-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+}
+
+.sort-toggle span {
+  display: inline;
+  line-height: 1.2;
+}
+
+.sort-toggle .mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+
+.no-wrap {
+  white-space: nowrap;
+}
+
+:host ::ng-deep .catalog-table .user-set-id-col {
+  min-width: 130px;
+  white-space: nowrap;
+}
+
 .set-row {
   cursor: pointer;
 }
 
 .set-row:hover {
-  background: #eef6fa;
-}
-
-.expand-btn {
-  white-space: nowrap;
+  background: rgba(13, 73, 89, 0.06);
 }
 
 .catalog-actions {
@@ -293,9 +342,43 @@ button[mat-stroked-button][disabled] {
   gap: 6px;
 }
 
+.expand-icon-btn {
+  width: 34px;
+  height: 34px;
+  color: #0b7285;
+  border: 1px solid rgba(11, 114, 133, 0.35);
+  background: #f1f9fc;
+  opacity: 0.5;
+  transform: scale(0.94);
+  transition: opacity 180ms ease, transform 180ms ease, background-color 180ms ease;
+}
+
+:host ::ng-deep .set-row:hover .expand-icon-btn,
+:host ::ng-deep .set-row.cdk-focused .expand-icon-btn,
+:host ::ng-deep .set-row.cdk-program-focused .expand-icon-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.expand-icon-btn:hover {
+  background: #dff0f6;
+}
+
 .delete-set-btn {
   color: #b83333;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+:host-context([data-theme='dark']) .expand-icon-btn {
+  color: #8dd8e5;
+  border-color: rgba(141, 216, 229, 0.45);
+  background: var(--lego-surface-muted);
+  opacity: 0.72;
+}
+
+:host-context([data-theme='dark']) .expand-icon-btn:hover {
+  background: var(--lego-table-row-hover);
 }
 
 .detail-row {
@@ -338,22 +421,6 @@ button[mat-stroked-button][disabled] {
   max-height: 260px;
   object-fit: contain;
   display: block;
-}
-
-.instructions-panel {
-  margin-bottom: 10px;
-}
-
-.instruction-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.instruction-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }
 
 .table-thumb {
@@ -506,14 +573,23 @@ mat-paginator {
   }
 
   .catalog-actions {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
   }
 
-  .expand-btn,
+  .expand-icon-btn,
   .delete-set-btn {
-    width: 100%;
-    text-align: center;
+    width: auto;
+    text-align: left;
+  }
+
+  .expand-icon-btn {
+    opacity: 1;
+    transform: none;
+    border-radius: 10px;
+    height: 38px;
   }
 
   .catalog-table {
@@ -599,7 +675,7 @@ mat-paginator {
     height: 32px;
   }
 
-  .expand-btn,
+  .expand-icon-btn,
   .delete-set-btn {
     padding: 4px 8px;
     font-size: 0.76rem;

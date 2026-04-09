@@ -73,4 +73,29 @@ function me(request, response) {
     });
 }
 
-export { login, register, me };
+function completeOnboarding(request, response) {
+  const token = getBearerToken(request);
+  if (!token) {
+    response.status(401).json({ error: 'Missing bearer token' });
+    return;
+  }
+
+  authModel.completeOnboarding(token)
+    .then((user) => {
+      response.json({ user });
+    })
+    .catch((error) => {
+      const message = error?.message || 'Unable to mark onboarding as completed';
+      if (message === 'Missing token' || message === 'invalid token' || message === 'jwt malformed' || message === 'jwt expired') {
+        response.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+      if (message === 'User not found') {
+        response.status(404).json({ error: message });
+        return;
+      }
+      response.status(500).json({ error: message });
+    });
+}
+
+export { login, register, me, completeOnboarding };

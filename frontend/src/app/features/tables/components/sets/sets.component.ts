@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -12,7 +12,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
-import { CatalogSetPart, CatalogSetPartsResponse, PagedResult, SetInstruction, SetInstructionsResponse } from '../../../../core/services/api-types';
+import { CatalogSetPart, CatalogSetPartsResponse, PagedResult } from '../../../../core/services/api-types';
 import { SetsApiService } from '../../../../core/services/sets-api.service';
 import { SetsTableApiService, ThemesApiService } from '../../../../core/services/tables/table-services.service';
 import { SETS_CONFIG } from '../../config/table-definitions';
@@ -38,7 +38,7 @@ import { SETS_CONFIG } from '../../config/table-definitions';
   templateUrl: './sets.component.html',
   styleUrl: './sets.component.scss'
 })
-export class SetsComponent {
+export class SetsComponent implements OnDestroy {
   readonly config = SETS_CONFIG;
   private readonly setsTableApi = inject(SetsTableApiService);
   private readonly themesApi = inject(ThemesApiService);
@@ -50,9 +50,7 @@ export class SetsComponent {
   readonly page = signal(1);
   readonly pageSize = signal(25);
   readonly searchTerm = signal('');
-  readonly appliedSearch = signal('');
   readonly selectedThemeId = signal<number | null>(null);
-  readonly appliedThemeId = signal<number | null>(null);
   readonly themeSearchTerm = signal('');
   readonly themeOptions = signal<Array<{ id: number; name: string }>>([]);
   readonly filteredThemeOptions = computed(() => {
@@ -64,17 +62,25 @@ export class SetsComponent {
       return theme.name.toLowerCase().includes(term) || String(theme.id).includes(term);
     });
   });
+  readonly themeNameById = computed(() => {
+    const map: Record<number, string> = {};
+    for (const theme of this.themeOptions()) {
+      map[theme.id] = theme.name;
+    }
+    return map;
+  });
   readonly pageSizeOptions = [10, 25, 50, 100, 200];
   readonly displayedColumns = [...this.config.displayedColumns, 'expand'];
   readonly detailColumns = ['expandedDetail'];
+  readonly sortColumn = signal<string | null>(null);
+  readonly sortDirection = signal<'asc' | 'desc'>('asc');
+  readonly sortedRows = computed(() => this.rows());
 
   readonly expandedSetNum = signal<string | null>(null);
   readonly expandedLoading = signal(false);
   readonly expandedPartsMap = signal<Record<string, CatalogSetPart[]>>({});
   readonly expandedError = signal<string | null>(null);
-  readonly expandedInstructionsLoading = signal(false);
-  readonly expandedInstructionsMap = signal<Record<string, SetInstruction[]>>({});
-  readonly expandedInstructionsError = signal<string | null>(null);
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
   readonly expandedParts = computed(() => {
     const setNum = this.expandedSetNum();
     if (!setNum) {
@@ -82,17 +88,15 @@ export class SetsComponent {
     }
     return this.expandedPartsMap()[setNum] ?? [];
   });
-  readonly expandedInstructions = computed(() => {
-    const setNum = this.expandedSetNum();
-    if (!setNum) {
-      return [];
-    }
-    return this.expandedInstructionsMap()[setNum] ?? [];
-  });
-
   constructor() {
     this.loadThemeOptions();
     this.reload();
+  }
+
+  ngOnDestroy(): void {
+    if (this.searchTimer) {
+      clearTimeout(this.searchTimer);
+    }
   }
 
   handlePage(event: PageEvent): void {
@@ -101,47 +105,93 @@ export class SetsComponent {
     this.reload();
   }
 
-  applySearch(): void {
-    this.appliedSearch.set(this.searchTerm().trim());
-    const nextThemeId = this.resolveThemeIdFromSearch();
-    this.selectedThemeId.set(nextThemeId);
-    this.appliedThemeId.set(typeof nextThemeId === 'number' && nextThemeId > 0 ? nextThemeId : null);
+  handleSearchInput(value: string): void {
+    this.searchTerm.set(value);
+    this.scheduleSearch();
+  }
+
+  toggleSort(column: string): void {
+    if (column === 'expand') {
+      return;
+    }
+
+    const active = this.sortColumn();
+    if (active !== column) {
+      this.sortColumn.set(column);
+      this.sortDirection.set('asc');
+      this.page.set(1);
+      this.reload();
+      return;
+    }
+
+    this.sortDirection.set(this.sortDirection() === 'asc' ? 'desc' : 'asc');
+    this.page.set(1);
+    this.reload();
+  }
+
+  sortIcon(column: string): string {
+    if (this.sortColumn() !== column) {
+      return 'unfold_more';
+    }
+    return this.sortDirection() === 'asc' ? 'north' : 'south';
+  }
+
+  clearSort(): void {
+    if (!this.sortColumn()) {
+      return;
+    }
+
+    this.sortColumn.set(null);
+    this.sortDirection.set('asc');
+    this.page.set(1);
+    this.reload();
+  }
+
+  triggerSearchNow(): void {
     this.page.set(1);
     this.expandedSetNum.set(null);
     this.expandedError.set(null);
     this.reload();
   }
 
+  private scheduleSearch(): void {
+    if (this.searchTimer) {
+      clearTimeout(this.searchTimer);
+    }
+    this.searchTimer = setTimeout(() => {
+      this.triggerSearchNow();
+    }, 180);
+  }
+
   clearSearch(): void {
-    if (!this.searchTerm() && !this.appliedSearch() && this.selectedThemeId() === null && this.appliedThemeId() === null) {
+    const hasThemeFilter = this.resolveThemeIdFromSearch() !== null;
+    if (!this.searchTerm().trim() && !this.themeSearchTerm().trim() && !hasThemeFilter) {
       return;
     }
     this.searchTerm.set('');
-    this.appliedSearch.set('');
     this.themeSearchTerm.set('');
     this.selectedThemeId.set(null);
-    this.appliedThemeId.set(null);
-    this.page.set(1);
-    this.expandedSetNum.set(null);
-    this.expandedError.set(null);
-    this.reload();
+    this.triggerSearchNow();
   }
 
   handleThemeSearchInput(value: string): void {
     this.themeSearchTerm.set(value);
     this.selectedThemeId.set(null);
+    this.scheduleSearch();
   }
 
   selectTheme(themeId: number | null): void {
     if (typeof themeId !== 'number' || themeId <= 0) {
       this.selectedThemeId.set(null);
       this.themeSearchTerm.set('');
+      this.triggerSearchNow();
       return;
     }
 
     const selected = this.themeOptions().find((theme) => theme.id === themeId) ?? null;
     this.selectedThemeId.set(themeId);
     this.themeSearchTerm.set(selected ? selected.name : '');
+    this.triggerSearchNow();
   }
 
   toggleExpand(row: Record<string, unknown>): void {
@@ -153,88 +203,13 @@ export class SetsComponent {
     if (this.expandedSetNum() === setNum) {
       this.expandedSetNum.set(null);
       this.expandedError.set(null);
-      this.expandedInstructionsError.set(null);
       return;
     }
 
     this.expandedSetNum.set(setNum);
     this.expandedError.set(null);
-    this.expandedInstructionsError.set(null);
 
     this.ensureExpandedData(setNum);
-  }
-
-  openInstruction(instruction: SetInstruction | unknown, event?: Event): void {
-    if (event) {
-      event.stopPropagation();
-    }
-
-    const href = this.resolveInstructionUrl(instruction);
-    if (!href) {
-      return;
-    }
-
-    window.open(href, '_blank', 'noopener');
-  }
-
-  private resolveInstructionUrl(instruction: SetInstruction | unknown): string | null {
-    const maybeInstruction = (instruction && typeof instruction === 'object')
-      ? (instruction as Partial<SetInstruction>)
-      : null;
-
-    const setNum = String(maybeInstruction?.set_num ?? '').trim();
-    const searchString = this.toLegoSearchString(setNum);
-    const source = String(maybeInstruction?.source ?? '').toLowerCase();
-    const type = String(maybeInstruction?.instruction_type ?? '').toLowerCase();
-    const rawUrl = this.asAbsoluteUrl(maybeInstruction?.url ?? instruction);
-
-    if ((source === 'lego' || type === 'instructions-search') && searchString) {
-      if (!rawUrl) {
-        return this.buildLegoSearchUrl(searchString);
-      }
-
-      try {
-        const parsed = new URL(rawUrl);
-        parsed.pathname = '/en-us/service/building-instructions/search-results';
-        parsed.searchParams.set('searchString', searchString);
-        parsed.searchParams.set('page', '1');
-        return parsed.toString();
-      } catch {
-        return this.buildLegoSearchUrl(searchString);
-      }
-    }
-
-    return rawUrl;
-  }
-
-  private buildLegoSearchUrl(searchString: string): string {
-    return `https://www.lego.com/en-us/service/building-instructions/search-results?searchString=${encodeURIComponent(searchString)}&page=1`;
-  }
-
-  private toLegoSearchString(setNum: string): string {
-    const normalized = String(setNum ?? '').trim();
-    if (!normalized) {
-      return '';
-    }
-    const dashIndex = normalized.indexOf('-');
-    if (dashIndex <= 0) {
-      return normalized;
-    }
-    return normalized.slice(0, dashIndex);
-  }
-
-  asAbsoluteUrl(value: unknown): string | null {
-    if (typeof value !== 'string') {
-      return null;
-    }
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return trimmed;
-    }
-    return null;
   }
 
   private ensureExpandedData(setNum: string): void {
@@ -256,23 +231,6 @@ export class SetsComponent {
       });
     }
 
-    const cachedInstructions = this.expandedInstructionsMap()[setNum];
-    if (!cachedInstructions) {
-      this.expandedInstructionsLoading.set(true);
-      this.setsApi.getCatalogSetInstructions(setNum).subscribe({
-        next: (response: SetInstructionsResponse) => {
-          this.expandedInstructionsLoading.set(false);
-          this.expandedInstructionsMap.update((current) => ({
-            ...current,
-            [setNum]: Array.isArray(response.instructions) ? response.instructions : []
-          }));
-        },
-        error: () => {
-          this.expandedInstructionsLoading.set(false);
-          this.expandedInstructionsError.set('Failed to load instruction links.');
-        }
-      });
-    }
   }
 
   isExpanded(row: Record<string, unknown>): boolean {
@@ -314,6 +272,13 @@ export class SetsComponent {
     return column.toLowerCase().endsWith('img_url') || column.toLowerCase() === 'img_url';
   }
 
+  displayCellValue(column: string, value: unknown): unknown {
+    if (column === 'theme_id') {
+      return this.getThemeName(value);
+    }
+    return value;
+  }
+
   asImageUrl(value: unknown): string | null {
     if (typeof value !== 'string') {
       return null;
@@ -327,15 +292,26 @@ export class SetsComponent {
 
   private reload(): void {
     this.loading.set(true);
-    const search = this.appliedSearch();
+    const search = this.searchTerm().trim();
     const extraParams: Record<string, string | number> = {};
-    const themeId = this.appliedThemeId();
+    const themeId = this.resolveThemeIdFromSearch();
     if (search) {
       extraParams['search'] = search;
+      const searchYear = this.parseYear(search);
+      if (searchYear !== null) {
+        extraParams['year'] = searchYear;
+      }
     }
     if (themeId) {
       extraParams['themeId'] = themeId;
     }
+
+    const sortColumn = this.resolveServerSortColumn(this.sortColumn());
+    if (sortColumn) {
+      extraParams['sortBy'] = sortColumn;
+      extraParams['sortDir'] = this.sortDirection();
+    }
+
     this.setsTableApi.getRows(this.page(), this.pageSize(), extraParams).subscribe({
       next: (response) => {
         this.loading.set(false);
@@ -352,6 +328,21 @@ export class SetsComponent {
         this.loading.set(false);
       }
     });
+  }
+
+  private getSortValue(row: Record<string, unknown>, column: string): unknown {
+    if (column === 'theme_id') {
+      return this.getThemeName(row[column]);
+    }
+    return row[column];
+  }
+
+  private getThemeName(value: unknown): string {
+    const themeId = Number(value);
+    if (!Number.isInteger(themeId) || themeId <= 0) {
+      return String(value ?? '');
+    }
+    return this.themeNameById()[themeId] ?? String(value);
   }
 
   private loadThemeOptions(): void {
@@ -394,5 +385,83 @@ export class SetsComponent {
     }
 
     return null;
+  }
+
+  private parseYear(value: string): number | null {
+    const trimmed = value.trim();
+    if (!/^\d{4}$/.test(trimmed)) {
+      return null;
+    }
+    const year = Number(trimmed);
+    if (!Number.isInteger(year) || year < 1900 || year > 2100) {
+      return null;
+    }
+    return year;
+  }
+
+  private compareValues(left: unknown, right: unknown): number {
+    const leftNumber = this.toNumber(left);
+    const rightNumber = this.toNumber(right);
+    if (leftNumber !== null && rightNumber !== null) {
+      return leftNumber - rightNumber;
+    }
+
+    const leftTime = this.toTimestamp(left);
+    const rightTime = this.toTimestamp(right);
+    if (leftTime !== null && rightTime !== null) {
+      return leftTime - rightTime;
+    }
+
+    return String(left ?? '').localeCompare(String(right ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+  }
+
+  private toNumber(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const normalized = value.trim();
+      if (!normalized) {
+        return null;
+      }
+      const numeric = Number(normalized);
+      if (Number.isFinite(numeric)) {
+        return numeric;
+      }
+    }
+    return null;
+  }
+
+  private toTimestamp(value: unknown): number | null {
+    if (typeof value !== 'string') {
+      return null;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const timestamp = Date.parse(trimmed);
+    if (Number.isNaN(timestamp)) {
+      return null;
+    }
+    return timestamp;
+  }
+
+  private resolveServerSortColumn(column: string | null): string | null {
+    if (!column || column === 'expand') {
+      return null;
+    }
+
+    const allowedColumns = new Set([
+      'set_num',
+      'name',
+      'year',
+      'theme_id',
+      'num_parts',
+      'img_url',
+      'instruction_count'
+    ]);
+
+    return allowedColumns.has(column) ? column : null;
   }
 }

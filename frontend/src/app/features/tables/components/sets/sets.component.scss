@@ -138,6 +138,33 @@ th.mat-mdc-header-cell {
   border-bottom: 1px solid #c9dbe3;
 }
 
+.sort-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+}
+
+.sort-toggle span {
+  display: inline;
+  line-height: 1.2;
+}
+
+.sort-toggle .mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+
 td.mat-mdc-cell {
   color: #102c38;
   border-bottom: 1px solid #dce9ef;
@@ -203,22 +230,6 @@ tr.detail-row {
 .expanded-panel h3 {
   margin: 0 0 10px;
   color: #1c4553;
-}
-
-.instructions-panel {
-  margin-bottom: 10px;
-}
-
-.instruction-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.instruction-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }
 
 .muted {

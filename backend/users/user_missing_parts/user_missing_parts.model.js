@@ -15,6 +15,8 @@ async function getCatalog(query = {}) {
   try {
     const { page, pageSize, offset } = database.parsePagination(query);
     const quantityColumn = await resolveMissingQuantityColumn();
+    const requestedSortBy = String(query.sortBy ?? '').trim().toLowerCase();
+    const requestedSortDir = String(query.sortDir ?? '').trim().toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
     const filters = [];
     const params = [];
@@ -52,6 +54,19 @@ async function getCatalog(query = {}) {
 
     const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
 
+    const sortWhitelist = {
+      part_img_url: 'p.part_img_url',
+      part_num: 'ump.part_num',
+      part_name: 'p.name',
+      quantity_missing: `ump.${quantityColumn}`,
+      color_name: 'c.name',
+      set: "CONCAT(COALESCE(us.set_num, ''), ' ', COALESCE(s.name, ''))",
+      theme_name: 't.name',
+      user: "COALESCE(u.full_name, u.username, u.email, '')"
+    };
+
+    const sortColumnSql = sortWhitelist[requestedSortBy] ?? 'us.user_set_id';
+
     const countSql = `
       SELECT COUNT(*) AS total
       FROM user_missing_parts ump
@@ -73,6 +88,7 @@ async function getCatalog(query = {}) {
         t.id AS theme_id,
         t.name AS theme_name,
         ump.part_num,
+        em.element_id,
         p.name AS part_name,
         p.part_img_url,
         ump.color_id,
@@ -87,9 +103,17 @@ async function getCatalog(query = {}) {
       LEFT JOIN sets s ON s.set_num = us.set_num
       LEFT JOIN themes t ON t.id = s.theme_id
       LEFT JOIN parts p ON p.part_num = ump.part_num
+      LEFT JOIN (
+        SELECT
+          part_num,
+          color_id,
+          MIN(element_id) AS element_id
+        FROM elements
+        GROUP BY part_num, color_id
+      ) em ON em.part_num = ump.part_num AND em.color_id = ump.color_id
       LEFT JOIN colors c ON c.id = ump.color_id
       ${whereClause}
-      ORDER BY us.user_set_id DESC, p.name ASC, ump.part_num ASC, ump.color_id ASC
+      ORDER BY ${sortColumnSql} ${requestedSortDir}, us.user_set_id DESC, ump.part_num ASC, ump.color_id ASC
       LIMIT ? OFFSET ?
     `;
 
@@ -122,12 +146,18 @@ async function getAll(query = {}) {
     }
 
     const { page, pageSize, offset } = database.parsePagination(query);
+    const sortBy = database.sanitizeSortColumn(query.sortBy) ?? idColumn;
+    const sortDir = database.normalizeSortDirection(query.sortDir);
     const countSql = `SELECT COUNT(*) AS total FROM ${tableName} WHERE user_id = ?`;
-    const dataSql = `SELECT * FROM ${tableName} WHERE user_id = ? LIMIT ? OFFSET ?`;
+
+    const columns = await database.getTableColumns(tableName);
+    const effectiveSortBy = columns.has(sortBy) ? sortBy : idColumn;
+    const effectiveOrderBySql = ` ORDER BY ${effectiveSortBy} ${sortDir}`;
+    const effectiveDataSql = `SELECT * FROM ${tableName} WHERE user_id = ?${effectiveOrderBySql} LIMIT ? OFFSET ?`;
 
     const [countRows, dataRows] = await Promise.all([
       database.query(countSql, [requestedUserId]),
-      database.query(dataSql, [requestedUserId, pageSize, offset])
+      database.query(effectiveDataSql, [requestedUserId, pageSize, offset])
     ]);
 
     const total = Number(countRows?.[0]?.total ?? 0);

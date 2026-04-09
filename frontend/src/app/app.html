@@ -1,6 +1,6 @@
 <div class="page-bg">
 	<mat-toolbar class="hero-toolbar">
-		<div class="toolbar-title">
+		<div class="toolbar-title" data-guide-id="toolbar-title">
 			<mat-icon>construction</mat-icon>
 			<span>{{ title }}</span>
 		</div>
@@ -10,6 +10,14 @@
 			{{ theme() === 'dark' ? 'Light' : 'Dark' }}
 		</button>
 		<ng-container *ngIf="auth.user() as user">
+			<button class="pickabrick-btn" mat-flat-button type="button" (click)="openPickABrick()">
+				<mat-icon>open_in_new</mat-icon>
+				Pick a Brick
+			</button>
+			<button class="guide-btn" mat-stroked-button type="button" data-guide-id="open-guide" (click)="openGuide()">
+				<mat-icon>school</mat-icon>
+				Guide
+			</button>
 			<button class="account-btn" mat-stroked-button type="button" [matMenuTriggerFor]="accountMenu">
 				<span class="avatar-chip" [class.has-image]="profileImageUrl(user)">
 					<img *ngIf="profileImageUrl(user) as profileImg" [src]="profileImg" alt="Profile" />
@@ -53,8 +61,11 @@
 			</div>
 		</section>
 
-		<mat-tab-group class="top-tabs" animationDuration="300ms">
-			<mat-tab label="Build Actions">
+		<mat-tab-group class="top-tabs" animationDuration="300ms" data-guide-id="main-tabs">
+			<mat-tab>
+				<ng-template mat-tab-label>
+					<span data-guide-id="tab-build-actions">Build Actions</span>
+				</ng-template>
 				<ng-template matTabContent>
 					<div class="nested-tabs">
 						<lego-user-sets></lego-user-sets>
@@ -62,7 +73,10 @@
 				</ng-template>
 			</mat-tab>
 
-			<mat-tab label="Missing Parts">
+			<mat-tab>
+				<ng-template mat-tab-label>
+					<span data-guide-id="tab-missing-parts">Missing Parts</span>
+				</ng-template>
 				<ng-template matTabContent>
 					<div class="nested-tabs">
 						<lego-user-missing-parts></lego-user-missing-parts>
@@ -70,7 +84,10 @@
 				</ng-template>
 			</mat-tab>
 
-			<mat-tab label="Set Catalog">
+			<mat-tab>
+				<ng-template mat-tab-label>
+					<span data-guide-id="tab-set-catalog">Set Catalog</span>
+				</ng-template>
 				<ng-template matTabContent>
 					<div class="nested-tabs">
 						<lego-sets></lego-sets>
@@ -104,12 +121,105 @@
 	</ng-container>
 
 	<ng-template #loginOnly>
-		<section class="hero-copy">
-			<h1>Sign In Required</h1>
-			<p>Please login to access the LEGO webapp.</p>
+		<section class="landing-hero">
+			<div class="landing-copy">
+				<p class="landing-kicker">LEGO Collection Manager</p>
+				<h1>Track every set, every part, and every build step in one place.</h1>
+				<p>
+					This app helps you organize your collection, monitor missing parts, and move from idea to finished model without
+					losing track of what you own.
+				</p>
+				<div class="landing-cta-row">
+					<a mat-flat-button class="landing-cta-primary" href="#get-started">Get Started</a>
+					<a mat-stroked-button class="landing-cta-secondary" href="#how-it-works">How It Works</a>
+				</div>
+			</div>
+			<div class="landing-highlight-panel">
+				<div class="highlight-card">
+					<mat-icon>inventory_2</mat-icon>
+					<div>
+						<h3>Unified Catalog</h3>
+						<p>Browse sets, parts, colors, themes, and related inventory data from one connected workspace.</p>
+					</div>
+				</div>
+				<div class="highlight-card">
+					<mat-icon>build</mat-icon>
+					<div>
+						<h3>Build Planning</h3>
+						<p>Save your build intentions, track progress, and focus only on what needs to happen next.</p>
+					</div>
+				</div>
+				<div class="highlight-card">
+					<mat-icon>warning_amber</mat-icon>
+					<div>
+						<h3>Missing Part Visibility</h3>
+						<p>Quickly identify unavailable pieces and keep your replacement list ready for your next order.</p>
+					</div>
+				</div>
+			</div>
 		</section>
-		<div class="auth-gate">
-			<lego-auth-form></lego-auth-form>
-		</div>
+
+		<section class="landing-section" id="how-it-works">
+			<h2>How This Website Works</h2>
+			<div class="steps-grid">
+				<article class="step-card">
+					<span>1</span>
+					<h3>Create Your Account</h3>
+					<p>Register once to get your own personal collection space and synced build actions.</p>
+				</article>
+				<article class="step-card">
+					<span>2</span>
+					<h3>Add Sets to Build</h3>
+					<p>Select from the set catalog and track which projects you want to start, pause, or complete.</p>
+				</article>
+				<article class="step-card">
+					<span>3</span>
+					<h3>Review Part Availability</h3>
+					<p>Compare your owned parts against required inventory and capture exactly what is missing.</p>
+				</article>
+				<article class="step-card">
+					<span>4</span>
+					<h3>Build With Confidence</h3>
+					<p>Use your organized data to start builds with fewer surprises and less time searching for pieces.</p>
+				</article>
+			</div>
+		</section>
+
+		<section class="landing-section alt">
+			<h2>Why Use It</h2>
+			<p class="landing-lead">
+				LEGO collections grow fast. This platform gives you structure, context, and a practical workflow so your collection
+				stays usable instead of overwhelming.
+			</p>
+			<div class="why-grid">
+				<article>
+					<mat-icon>insights</mat-icon>
+					<h3>Clarity</h3>
+					<p>Know what you own, what you need, and where each piece belongs in your build journey.</p>
+				</article>
+				<article>
+					<mat-icon>bolt</mat-icon>
+					<h3>Speed</h3>
+					<p>Spend less time manually checking inventories and more time actually building.</p>
+				</article>
+				<article>
+					<mat-icon>verified</mat-icon>
+					<h3>Reliability</h3>
+					<p>Make decisions from consistent data across sets, parts, and your personal missing list.</p>
+				</article>
+			</div>
+		</section>
+
+		<section class="landing-auth" id="get-started">
+			<div class="landing-auth-copy">
+				<h2>First Time Here?</h2>
+				<p>Register to unlock your own build workspace. Already have an account? Sign in and continue where you left off.</p>
+			</div>
+			<div class="auth-gate">
+				<lego-auth-form></lego-auth-form>
+			</div>
+		</section>
 	</ng-template>
+
+	<lego-onboarding-guide></lego-onboarding-guide>
 </div>

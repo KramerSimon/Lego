@@ -32,6 +32,24 @@
 	border-color: var(--lego-toolbar-border);
 }
 
+.guide-btn {
+	border-color: var(--lego-toolbar-border);
+}
+
+.pickabrick-btn {
+	border-radius: 999px;
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	background: linear-gradient(90deg, #0b7285 0%, #1098ad 100%);
+	color: #ffffff;
+	transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.pickabrick-btn:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 8px 16px rgba(15, 23, 42, 0.18);
+}
+
 :host ::ng-deep .hero-toolbar .mat-mdc-outlined-button,
 :host ::ng-deep .hero-toolbar .mat-mdc-stroked-button {
 	color: var(--lego-form-ink) !important;
@@ -302,6 +320,11 @@
 		width: auto;
 		flex: 0 0 auto;
 		min-width: 84px;
+	}
+
+	.pickabrick-btn {
+		min-width: 0;
+		padding: 0 10px;
 	}
 
 	.account-label {

@@ -75,6 +75,28 @@ async function ensureSchema() {
     `);
   }
 
+  const onboardingRequiredRows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['onboarding_guide_required']);
+  const hasOnboardingRequiredColumn = Array.isArray(onboardingRequiredRows) && onboardingRequiredRows.length > 0;
+
+  if (!hasOnboardingRequiredColumn) {
+    await database.query(`
+      ALTER TABLE users
+      ADD COLUMN onboarding_guide_required TINYINT(1) NOT NULL DEFAULT 0 AFTER is_admin
+    `);
+  }
+
+  const onboardingCompletedRows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['onboarding_completed_at']);
+  const hasOnboardingCompletedColumn = Array.isArray(onboardingCompletedRows) && onboardingCompletedRows.length > 0;
+
+  if (!hasOnboardingCompletedColumn) {
+    await database.query(`
+      ALTER TABLE users
+      ADD COLUMN onboarding_completed_at DATETIME NULL AFTER onboarding_guide_required
+    `);
+  }
+
+  await database.query('UPDATE users SET onboarding_guide_required = 0 WHERE onboarding_completed_at IS NOT NULL');
+
   await database.query('UPDATE users SET is_admin = 1 WHERE LOWER(username) = ?', ['simon']);
 }
 
