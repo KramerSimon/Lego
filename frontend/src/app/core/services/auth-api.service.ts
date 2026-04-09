@@ -2,7 +2,7 @@ import { HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiHttpService } from './api-http.service';
-import { AuthAccountResponse, AuthLoginResponse, AuthUser } from './api-types';
+import { AuthAccountResponse, AuthLoginResponse, AuthRegisterPayload, AuthUser } from './api-types';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiService {
@@ -13,6 +13,10 @@ export class AuthApiService {
       identifier,
       password
     });
+  }
+
+  register(payload: AuthRegisterPayload): Observable<AuthLoginResponse> {
+    return this.apiHttp.post<AuthLoginResponse>('auth/register', payload);
   }
 
   me(token: string): Observable<{ user: AuthUser }> {

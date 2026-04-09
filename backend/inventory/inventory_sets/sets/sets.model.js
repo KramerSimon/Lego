@@ -24,7 +24,18 @@ async function getAll(query = {}) {
     const whereSql = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
 
     const countSql = `SELECT COUNT(*) AS total FROM sets${whereSql}`;
-    const dataSql = `SELECT * FROM sets${whereSql} ORDER BY set_num LIMIT ? OFFSET ?`;
+    const dataSql = `
+      SELECT
+        s.*,
+        (
+          SELECT COUNT(*)
+          FROM set_instructions si
+          WHERE si.set_num = s.set_num
+        ) AS instruction_count
+      FROM sets s${whereSql.replace(/\bset_num\b/g, 's.set_num').replace(/\bname\b/g, 's.name').replace(/\btheme_id\b/g, 's.theme_id')}
+      ORDER BY s.set_num
+      LIMIT ? OFFSET ?
+    `;
 
     const [countRows, dataRows] = await Promise.all([
       database.query(countSql, whereParams),
@@ -47,8 +58,43 @@ async function getAll(query = {}) {
 }
 async function getItem(id) {
   try {
-    const sql = 'SELECT * FROM sets WHERE set_num = ?';
+    const sql = `
+      SELECT
+        s.*,
+        (
+          SELECT COUNT(*)
+          FROM set_instructions si
+          WHERE si.set_num = s.set_num
+        ) AS instruction_count
+      FROM sets s
+      WHERE s.set_num = ?
+    `;
     return database.queryClose(sql, [id]).then(results => results[0]);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
+async function getInstructions(setNum) {
+  try {
+    const sql = `
+      SELECT
+        id,
+        set_num,
+        source,
+        source_label,
+        url,
+        name,
+        instruction_type,
+        sort_order,
+        created_at,
+        updated_at
+      FROM set_instructions
+      WHERE set_num = ?
+      ORDER BY sort_order ASC, id ASC
+    `;
+
+    return database.queryClose(sql, [setNum]);
   } catch (error) {
     return Promise.reject(error);
   }
@@ -97,4 +143,4 @@ async function getParts(setNum) {
   }
 }
 
-export default { getAll, getItem, getParts };
+export default { getAll, getItem, getParts, getInstructions };

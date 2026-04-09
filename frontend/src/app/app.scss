@@ -221,6 +221,23 @@
 	margin-bottom: 16px;
 }
 
+.hero-intro {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+
+.hero-logo {
+	width: 64px;
+	height: 64px;
+	object-fit: contain;
+	flex: 0 0 auto;
+}
+
+.hero-text {
+	min-width: 0;
+}
+
 .hero-copy h1 {
 	margin: 0;
 	font-size: clamp(1.7rem, 3vw, 2.5rem);
@@ -302,6 +319,15 @@
 
 	.auth-gate {
 		max-width: 100%;
+	}
+
+	.hero-intro {
+		align-items: flex-start;
+	}
+
+	.hero-logo {
+		width: 52px;
+		height: 52px;
 	}
 
 	:host ::ng-deep .mat-mdc-tab .mdc-tab__text-label {

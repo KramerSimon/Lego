@@ -4,6 +4,7 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -20,6 +21,7 @@ import { SelectLoadMore, SelectOption, SelectSearchChange } from './table-form.m
     MatButtonModule,
     MatCardModule,
     MatCheckboxModule,
+    MatAutocompleteModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -56,5 +58,13 @@ export class TableFormComponent {
 
   onLoadMore(field: TableField, event: Event): void {
     this.loadMore.emit({ field, event });
+  }
+
+  displaySelectOption(field: TableField): (value: unknown) => string {
+    return (value: unknown) => {
+      const options = this.getOptions()(field);
+      const matched = options.find((option) => option.value === value);
+      return matched ? matched.label : String(value ?? '');
+    };
   }
 }

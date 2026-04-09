@@ -12,8 +12,12 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "migrate": "npm run migrate:profile-image",
-    "migrate:profile-image": "node scripts/migrate-add-profile-image-url.js"
+    "migrate": "npm run migrate:profile-image && npm run migrate:set-instructions",
+    "migrate:profile-image": "node scripts/migrate-add-profile-image-url.js",
+    "migrate:set-instructions": "node scripts/migrate-add-set-instructions-table.js",
+    "enrich:instructions": "node scripts/enrich-set-instructions.js",
+    "enrich:instructions:set-pages": "node scripts/enrich-set-instructions.js --mode set-page",
+    "enrich:instructions:lego": "node scripts/enrich-set-instructions.js --mode lego-search --locale en-us"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

@@ -20,6 +20,21 @@ function getSetParts(request, response) {
       response.status(500).json({ error: 'Failed to retrieve set parts' });
     });
 }
+
+function getSetInstructions(request, response) {
+  const id = request.params.id;
+  setsModel.getInstructions(id)
+    .then((items) => {
+      response.json({
+        set_num: id,
+        instructions: items
+      });
+    })
+    .catch(() => {
+      response.status(500).json({ error: 'Failed to retrieve set instructions' });
+    });
+}
+
 function getSet(request, response) {
   const id = request.params.id;
   setsModel.getItem(id)
@@ -34,4 +49,4 @@ function getSet(request, response) {
       response.status(500).json({ error: 'Failed to retrieve Set' });
     });
 }
-export { getSets, getSet, getSetParts };
+export { getSets, getSet, getSetParts, getSetInstructions };

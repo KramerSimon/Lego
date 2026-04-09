@@ -19,32 +19,20 @@
 
 			<mat-form-field appearance="outline" class="theme-field">
 				<mat-label>Theme</mat-label>
-				<mat-select
-					[ngModel]="selectedThemeId()"
-					(ngModelChange)="selectedThemeId.set($event)"
-					panelClass="lego-select-panel"
-					(openedChange)="handleThemePanelOpened($event)"
-				>
-					<mat-option class="set-search-option" disabled>
-						<div class="search-input-wrap" (click)="$event.stopPropagation()">
-							<mat-icon>search</mat-icon>
-							<input
-								matInput
-								[value]="themeSearchTerm()"
-								(input)="handleThemeSearchInput($any($event.target).value)"
-								(click)="$event.stopPropagation()"
-								(keydown)="$event.stopPropagation()"
-								placeholder="Search category"
-							/>
-						</div>
-					</mat-option>
-
+				<input
+					matInput
+					[ngModel]="themeSearchTerm()"
+					(ngModelChange)="handleThemeSearchInput($event)"
+					[matAutocomplete]="themeAuto"
+					placeholder="All themes"
+				/>
+				<mat-autocomplete #themeAuto="matAutocomplete" (optionSelected)="selectTheme($any($event.option.value))">
 					<mat-option [value]="null">All themes</mat-option>
 					<mat-option *ngFor="let theme of filteredThemeOptions()" [value]="theme.id">
 						{{ theme.name }}
 					</mat-option>
 					<mat-option *ngIf="filteredThemeOptions().length === 0" disabled>No matching categories found</mat-option>
-				</mat-select>
+				</mat-autocomplete>
 			</mat-form-field>
 
 			<div class="search-actions">
@@ -63,7 +51,7 @@
 					<th mat-header-cell *matHeaderCellDef>{{ getColumnLabel(column) }}</th>
 					<td mat-cell *matCellDef="let row" [attr.data-label]="getColumnLabel(column)">
 						<ng-container *ngIf="column === 'expand'; else regularCell">
-							<button class="expand-btn" type="button" (click)="toggleExpand(row); $event.stopPropagation()">
+							<button mat-stroked-button class="expand-btn" type="button" (click)="toggleExpand(row); $event.stopPropagation()">
 								{{ isExpanded(row) ? 'Hide Parts' : 'Show Parts' }}
 							</button>
 						</ng-container>
@@ -87,6 +75,33 @@
 						<div class="expanded-panel" *ngIf="isExpanded(row)">
 							<div class="set-hero" *ngIf="asImageUrl(row['img_url']) as setImage">
 								<img [src]="setImage" [alt]="row['name'] || row['set_num'] || 'Set image'" class="set-hero-image" loading="lazy" />
+							</div>
+
+							<div class="instructions-panel">
+								<h3>Instructions</h3>
+
+								<div class="loader" *ngIf="expandedInstructionsLoading()">
+									<mat-spinner diameter="22"></mat-spinner>
+								</div>
+
+								<p class="error" *ngIf="expandedInstructionsError() && !expandedInstructionsLoading()">{{ expandedInstructionsError() }}</p>
+
+								<div class="instruction-list" *ngIf="!expandedInstructionsLoading() && !expandedInstructionsError() && expandedInstructions().length > 0">
+									<button
+										mat-stroked-button
+										type="button"
+										class="instruction-link"
+										*ngFor="let instruction of expandedInstructions()"
+										(click)="openInstruction(instruction, $event)"
+									>
+										<mat-icon>menu_book</mat-icon>
+										{{ instruction.name || instruction.instruction_type || instruction.source_label || 'Open link' }}
+									</button>
+								</div>
+
+								<p class="muted" *ngIf="!expandedInstructionsLoading() && !expandedInstructionsError() && expandedInstructions().length === 0">
+									No instruction links available for this set yet.
+								</p>
 							</div>
 
 							<h3>Parts for {{ row['set_num'] }}</h3>

@@ -147,13 +147,14 @@ export const SETS_CONFIG: TableConfig = {
   endpoint: 'sets',
   idField: 'set_num',
   allowCreate: false,
-  displayedColumns: ['set_num', 'name', 'year', 'theme_id', 'num_parts', 'img_url'],
+  displayedColumns: ['set_num', 'name', 'year', 'theme_id', 'num_parts', 'instruction_count', 'img_url'],
   fields: [
     { key: 'set_num', label: 'Set Number', type: 'text', required: true },
     { key: 'name', label: 'Name', type: 'text', required: true },
     { key: 'year', label: 'Year', type: 'number', required: true },
     { key: 'theme_id', label: 'Theme Id', type: 'number', required: true },
-    { key: 'num_parts', label: 'Number of Parts', type: 'number', required: true }
+    { key: 'num_parts', label: 'Number of Parts', type: 'number', required: true },
+    { key: 'instruction_count', label: 'Instruction Links', type: 'number', required: false }
   ]
 };
 

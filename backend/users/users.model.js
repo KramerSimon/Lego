@@ -11,6 +11,11 @@ async function hasProfileImageColumn() {
   return Array.isArray(rows) && rows.length > 0;
 }
 
+async function hasAdminColumn() {
+  const rows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['is_admin']);
+  return Array.isArray(rows) && rows.length > 0;
+}
+
 function sanitizeUser(row) {
   if (!row) {
     return null;
@@ -20,7 +25,8 @@ function sanitizeUser(row) {
     username: row.username,
     email: row.email,
     full_name: row.full_name,
-    profile_image_url: row.profile_image_url ?? null
+    profile_image_url: row.profile_image_url ?? null,
+    is_admin: Number(row.is_admin ?? 0) > 0
   };
 }
 async function getAll(query = {}) {
@@ -118,8 +124,10 @@ async function deleteUser(id) {
 async function getSelf(userId) {
   try {
     const includeProfileImage = await hasProfileImageColumn();
+    const includeAdmin = await hasAdminColumn();
     const profileSelect = includeProfileImage ? 'profile_image_url' : 'NULL AS profile_image_url';
-    const sql = `SELECT user_id, username, email, full_name, ${profileSelect} FROM users WHERE user_id = ? LIMIT 1`;
+    const adminSelect = includeAdmin ? 'is_admin' : '0 AS is_admin';
+    const sql = `SELECT user_id, username, email, full_name, ${profileSelect}, ${adminSelect} FROM users WHERE user_id = ? LIMIT 1`;
     const rows = await database.queryClose(sql, [userId]);
     return sanitizeUser(rows?.[0]);
   } catch (error) {
@@ -133,6 +141,9 @@ async function updateSelf(userId, payload = {}) {
     const includeProfileImage = await hasProfileImageColumn();
     const updates = [];
     const values = [];
+
+    // Account self-service endpoint must never allow privilege escalation.
+    delete payload.is_admin;
 
     const username = String(payload.username ?? '').trim();
     if (username) {

@@ -115,7 +115,44 @@ async function getCatalog(query = {}) {
 
 async function getAll(query = {}) {
   try {
-    return database.paginateTable(tableName, query);
+    const requestedUserId = Number(query.user_id);
+    const hasUserFilter = Number.isFinite(requestedUserId) && requestedUserId > 0;
+    if (!hasUserFilter) {
+      return database.paginateTable(tableName, query);
+    }
+
+    const { page, pageSize, offset } = database.parsePagination(query);
+    const countSql = `SELECT COUNT(*) AS total FROM ${tableName} WHERE user_id = ?`;
+    const dataSql = `SELECT * FROM ${tableName} WHERE user_id = ? LIMIT ? OFFSET ?`;
+
+    const [countRows, dataRows] = await Promise.all([
+      database.query(countSql, [requestedUserId]),
+      database.query(dataSql, [requestedUserId, pageSize, offset])
+    ]);
+
+    const total = Number(countRows?.[0]?.total ?? 0);
+    const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
+    return {
+      data: dataRows,
+      page,
+      pageSize,
+      total,
+      totalPages
+    };
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
+async function getOwnerUserId(id) {
+  try {
+    const sql = `SELECT user_id FROM ${tableName} WHERE ${idColumn} = ? LIMIT 1`;
+    const rows = await database.queryClose(sql, [id]);
+    const ownerId = Number(rows?.[0]?.user_id);
+    if (!Number.isFinite(ownerId) || ownerId <= 0) {
+      return null;
+    }
+    return ownerId;
   } catch (error) {
     return Promise.reject(error);
   }
@@ -174,4 +211,4 @@ async function deleteUserMissingPart(id) {
   }
 }
 
-export default { getAll, getCatalog, getItem, add, update, delete: deleteUserMissingPart };
+export default { getAll, getCatalog, getItem, getOwnerUserId, add, update, delete: deleteUserMissingPart };

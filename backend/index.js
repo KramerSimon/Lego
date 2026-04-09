@@ -21,7 +21,7 @@ import userPartsRouter from './users/user_parts/user_parts.router.js';
 import userMissingPartsRouter from './users/user_missing_parts/user_missing_parts.router.js';
 import userSetsRouter from './users/user_sets/user_sets.router.js';
 import authRouter from './auth/auth.router.js';
-import { authenticateRequest } from './auth/auth.middleware.js';
+import { authenticateRequest, requireAdmin } from './auth/auth.middleware.js';
 import openApiSpec from './openapi.js';
 const app = express();
 app.use(cors());
@@ -36,9 +36,14 @@ app.get('/', swaggerUi.setup(openApiSpec));
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 app.use('/auth', authRouter);
 app.use(authenticateRequest);
+app.use('/users', usersRouter);
+app.use('/sets', setsRouter);
+app.use('/themes', themesRouter);
+app.use('/user_missing_parts', userMissingPartsRouter);
+app.use('/user_sets', userSetsRouter);
+app.use(requireAdmin);
 app.use('/inventory', inventoryRouter);
 app.use('/inventory_parts', inventoryPartsRouter);
-app.use('/sets', setsRouter);
 app.use('/parts', partsRouter);
 app.use('/part_categories', partCategoriesRouter);
 app.use('/part_relationships', partRelationshipsRouter);
@@ -47,24 +52,30 @@ app.use('/colors', colorsRouter);
 app.use('/inventory_minifigs', inventoryMinifigsRouter);
 app.use('/minifigs', minifigsRouter);
 app.use('/inventory_sets', inventorySetsRouter);
-app.use('/themes', themesRouter);
-app.use('/users', usersRouter);
 app.use('/user_parts', userPartsRouter);
-app.use('/user_missing_parts', userMissingPartsRouter);
-app.use('/user_sets', userSetsRouter);
 
 async function ensureSchema() {
-  const rows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['profile_image_url']);
-  const hasProfileImageColumn = Array.isArray(rows) && rows.length > 0;
+  const profileRows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['profile_image_url']);
+  const hasProfileImageColumn = Array.isArray(profileRows) && profileRows.length > 0;
 
-  if (hasProfileImageColumn) {
-    return;
+  if (!hasProfileImageColumn) {
+    await database.query(`
+      ALTER TABLE users
+      ADD COLUMN profile_image_url VARCHAR(1024) NULL AFTER password_hash
+    `);
   }
 
-  await database.query(`
-    ALTER TABLE users
-    ADD COLUMN profile_image_url VARCHAR(1024) NULL AFTER password_hash
-  `);
+  const adminRows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['is_admin']);
+  const hasAdminColumn = Array.isArray(adminRows) && adminRows.length > 0;
+
+  if (!hasAdminColumn) {
+    await database.query(`
+      ALTER TABLE users
+      ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0 AFTER profile_image_url
+    `);
+  }
+
+  await database.query('UPDATE users SET is_admin = 1 WHERE LOWER(username) = ?', ['simon']);
 }
 
 ensureSchema()

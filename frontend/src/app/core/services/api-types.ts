@@ -4,11 +4,19 @@ export interface AuthUser {
   email?: string;
   full_name?: string;
   profile_image_url?: string | null;
+  is_admin?: boolean;
 }
 
 export interface AuthLoginResponse {
   token: string;
   user: AuthUser;
+}
+
+export interface AuthRegisterPayload {
+  username: string;
+  email: string;
+  full_name?: string;
+  password: string;
 }
 
 export interface AuthAccountResponse {
@@ -54,6 +62,24 @@ export interface CatalogSetPartsResponse {
   inventory_id: number | null;
   inventory_version?: number;
   parts: CatalogSetPart[];
+}
+
+export interface SetInstruction {
+  id: number;
+  set_num: string;
+  source: string;
+  source_label?: string | null;
+  url: string;
+  name?: string | null;
+  instruction_type?: string | null;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SetInstructionsResponse {
+  set_num: string;
+  instructions: SetInstruction[];
 }
 
 export interface UserSetCreatePayload {

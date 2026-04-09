@@ -1,10 +1,14 @@
 import express from 'express';
 import { getUsers, getUser, addUser, updateUser, deleteUser, getMyUser, updateMyUser } from './users.controller.js';
 import { profileImageUpload } from './users.upload.js';
+import { requireAdmin } from '../auth/auth.middleware.js';
 const router = express.Router();
-router.get('/', getUsers);
+
 router.get('/me', getMyUser);
 router.put('/me', profileImageUpload.single('profile_image'), updateMyUser);
+
+router.use(requireAdmin);
+router.get('/', getUsers);
 router.get('/:id', getUser);
 router.post('/', addUser);
 router.put('/:id', updateUser);

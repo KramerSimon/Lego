@@ -26,6 +26,28 @@ function login(request, response) {
     });
 }
 
+function register(request, response) {
+  authModel.register(request.body ?? {})
+    .then((result) => {
+      response.status(201).json(result);
+    })
+    .catch((error) => {
+      const message = error?.message || 'Registration failed';
+      if (
+        message === 'username, email and password are required'
+        || message === 'Password must be at least 8 characters long'
+      ) {
+        response.status(400).json({ error: message });
+        return;
+      }
+      if (message === 'Username already exists' || message === 'Email already exists') {
+        response.status(409).json({ error: message });
+        return;
+      }
+      response.status(500).json({ error: message });
+    });
+}
+
 function me(request, response) {
   const token = getBearerToken(request);
   if (!token) {
@@ -51,4 +73,4 @@ function me(request, response) {
     });
 }
 
-export { login, me };
+export { login, register, me };

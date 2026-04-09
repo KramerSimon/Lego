@@ -1,11 +1,12 @@
 <mat-card class="auth-card">
   <mat-card-header>
     <mat-card-title>User Authentication</mat-card-title>
-    <mat-card-subtitle>Login with username or email and password.</mat-card-subtitle>
+    <mat-card-subtitle *ngIf="mode() === 'login'">Login with username or email and password.</mat-card-subtitle>
+    <mat-card-subtitle *ngIf="mode() === 'register'">Create a new account to start tracking your LEGO inventory.</mat-card-subtitle>
   </mat-card-header>
 
   <mat-card-content>
-    <div *ngIf="auth.user() as user; else loginForm" class="auth-state">
+    <div *ngIf="auth.user() as user; else authForms" class="auth-state">
       <p><strong>Logged in as:</strong> {{ user.username }} (ID: {{ user.user_id }})</p>
       <button mat-stroked-button type="button" (click)="auth.logout()">
         <mat-icon>logout</mat-icon>
@@ -13,8 +14,29 @@
       </button>
     </div>
 
-    <ng-template #loginForm>
-      <form [formGroup]="form" (ngSubmit)="submit()" class="auth-form">
+    <ng-template #authForms>
+      <div class="auth-mode-switch" role="group" aria-label="Authentication mode">
+        <button
+          mat-stroked-button
+          type="button"
+          [class.active]="mode() === 'login'"
+          (click)="switchMode('login')"
+          [disabled]="auth.authenticating()"
+        >
+          Login
+        </button>
+        <button
+          mat-stroked-button
+          type="button"
+          [class.active]="mode() === 'register'"
+          (click)="switchMode('register')"
+          [disabled]="auth.authenticating()"
+        >
+          Register
+        </button>
+      </div>
+
+      <form *ngIf="mode() === 'login'" [formGroup]="loginForm" (ngSubmit)="submit()" class="auth-form">
         <mat-form-field appearance="outline">
           <mat-label>Username or Email</mat-label>
           <input matInput formControlName="identifier" placeholder="simon or simon@example.com" />
@@ -29,6 +51,64 @@
           <button mat-raised-button color="primary" type="submit" [disabled]="auth.authenticating()">
             <mat-icon>login</mat-icon>
             Login
+          </button>
+        </div>
+      </form>
+
+      <form *ngIf="mode() === 'register'" [formGroup]="registerForm" (ngSubmit)="submit()" class="auth-form register-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Username</mat-label>
+          <input matInput formControlName="username" placeholder="builder123" />
+          <mat-error *ngIf="fieldInvalid('username') && registerForm.controls.username.hasError('required')">
+            Username is required.
+          </mat-error>
+          <mat-error *ngIf="fieldInvalid('username') && registerForm.controls.username.hasError('minlength')">
+            Username must be at least 3 characters.
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Email</mat-label>
+          <input matInput formControlName="email" placeholder="builder@example.com" />
+          <mat-error *ngIf="fieldInvalid('email') && registerForm.controls.email.hasError('required')">
+            Email is required.
+          </mat-error>
+          <mat-error *ngIf="fieldInvalid('email') && registerForm.controls.email.hasError('email')">
+            Enter a valid email address.
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="auth-form-span-2">
+          <mat-label>Full name (optional)</mat-label>
+          <input matInput formControlName="full_name" placeholder="LEGO Builder" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Password</mat-label>
+          <input matInput type="password" formControlName="password" />
+          <mat-error *ngIf="fieldInvalid('password') && registerForm.controls.password.hasError('required')">
+            Password is required.
+          </mat-error>
+          <mat-error *ngIf="fieldInvalid('password') && registerForm.controls.password.hasError('minlength')">
+            Password must be at least 8 characters.
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Confirm password</mat-label>
+          <input matInput type="password" formControlName="confirm_password" />
+          <mat-error *ngIf="fieldInvalid('confirm_password') && registerForm.controls.confirm_password.hasError('required')">
+            Please confirm your password.
+          </mat-error>
+          <mat-error *ngIf="hasPasswordMismatch()">
+            Passwords do not match.
+          </mat-error>
+        </mat-form-field>
+
+        <div class="auth-actions auth-form-span-2">
+          <button mat-raised-button color="primary" type="submit" [disabled]="auth.authenticating()">
+            <mat-icon>person_add</mat-icon>
+            Create account
           </button>
         </div>
       </form>

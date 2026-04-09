@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -17,11 +18,13 @@ import { MatTableModule } from '@angular/material/table';
 import {
   PagedResult,
   SetPartRequirement,
+  SetInstruction,
   UserSetBreakdownPart,
   UserSetBreakdownResponse,
   UserSetPartSelection,
   UserSetWithPartsResult
 } from '../../../../core/services/api-types';
+import { SetsApiService } from '../../../../core/services/sets-api.service';
 import { UserSetsApiService } from '../../../../core/services/user-sets-api.service';
 import { SetsTableApiService, UserSetsTableApiService, UsersApiService } from '../../../../core/services/tables/table-services.service';
 import { forkJoin } from 'rxjs';
@@ -38,6 +41,7 @@ import { USER_SETS_CONFIG } from '../../config/table-definitions';
     MatCardModule,
     MatCheckboxModule,
     MatDividerModule,
+    MatAutocompleteModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -54,6 +58,7 @@ import { USER_SETS_CONFIG } from '../../config/table-definitions';
 export class UserSetsComponent implements OnInit {
   readonly config = USER_SETS_CONFIG;
   private readonly userSetsApi = inject(UserSetsApiService);
+  private readonly setsCatalogApi = inject(SetsApiService);
   private readonly userSetsTableApi = inject(UserSetsTableApiService);
   private readonly usersApi = inject(UsersApiService);
   private readonly setsApi = inject(SetsTableApiService);
@@ -85,7 +90,10 @@ export class UserSetsComponent implements OnInit {
   readonly expandedUserSetId = signal<number | null>(null);
   readonly breakdownLoading = signal(false);
   readonly breakdownError = signal<string | null>(null);
+  readonly instructionsLoading = signal(false);
+  readonly instructionsError = signal<string | null>(null);
   readonly breakdownMap = signal<Record<number, UserSetBreakdownResponse>>({});
+  readonly instructionMap = signal<Record<string, SetInstruction[]>>({});
   readonly editedQuantities = signal<Record<string, number>>({});
   readonly updatingRowKey = signal<string | null>(null);
   readonly deletingUserSetId = signal<number | null>(null);
@@ -102,6 +110,14 @@ export class UserSetsComponent implements OnInit {
       return null;
     }
     return this.breakdownMap()[userSetId] ?? null;
+  });
+  readonly expandedInstructions = computed(() => {
+    const breakdown = this.expandedBreakdown();
+    const setNum = String(breakdown?.set_num ?? '').trim();
+    if (!setNum) {
+      return [];
+    }
+    return this.instructionMap()[setNum] ?? [];
   });
 
   readonly pendingSummary = computed(() => {
@@ -170,6 +186,10 @@ export class UserSetsComponent implements OnInit {
         this.setParts.set([]);
         return;
       }
+      if (!this.isKnownSet(normalized)) {
+        this.setParts.set([]);
+        return;
+      }
       this.loadSetParts(normalized);
     });
 
@@ -200,11 +220,16 @@ export class UserSetsComponent implements OnInit {
     if (this.expandedUserSetId() === userSetId) {
       this.expandedUserSetId.set(null);
       this.breakdownError.set(null);
+      this.instructionsError.set(null);
       return;
     }
 
     this.expandedUserSetId.set(userSetId);
     this.breakdownError.set(null);
+    this.instructionsError.set(null);
+
+    const setNum = String(row['set_num'] ?? '').trim();
+    this.loadInstructionsForSet(setNum);
 
     const cached = this.breakdownMap()[userSetId];
     if (cached) {
@@ -219,6 +244,8 @@ export class UserSetsComponent implements OnInit {
           ...current,
           [userSetId]: response
         }));
+        const responseSetNum = String(response?.set_num ?? '').trim();
+        this.loadInstructionsForSet(responseSetNum);
       },
       error: () => {
         this.breakdownLoading.set(false);
@@ -573,6 +600,10 @@ export class UserSetsComponent implements OnInit {
       .filter((row) => row.set_num.length > 0);
   }
 
+  private isKnownSet(setNum: string): boolean {
+    return this.sets().some((setOption) => setOption.set_num === setNum);
+  }
+
   private loadSetParts(setNum: string): void {
     this.loadingParts.set(true);
     this.summary.set(null);
@@ -713,5 +744,88 @@ export class UserSetsComponent implements OnInit {
       return trimmed;
     }
     return null;
+  }
+
+  openInstruction(instruction: SetInstruction | unknown, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const href = this.resolveInstructionUrl(instruction);
+    if (!href) {
+      return;
+    }
+    window.open(href, '_blank', 'noopener');
+  }
+
+  private resolveInstructionUrl(instruction: SetInstruction | unknown): string | null {
+    const maybeInstruction = (instruction && typeof instruction === 'object')
+      ? (instruction as Partial<SetInstruction>)
+      : null;
+
+    const setNum = String(maybeInstruction?.set_num ?? '').trim();
+    const searchString = this.toLegoSearchString(setNum);
+    const source = String(maybeInstruction?.source ?? '').toLowerCase();
+    const type = String(maybeInstruction?.instruction_type ?? '').toLowerCase();
+    const rawUrl = this.asImageUrl(maybeInstruction?.url ?? instruction);
+
+    if ((source === 'lego' || type === 'instructions-search') && searchString) {
+      if (!rawUrl) {
+        return this.buildLegoSearchUrl(searchString);
+      }
+
+      try {
+        const parsed = new URL(rawUrl);
+        parsed.pathname = '/en-us/service/building-instructions/search-results';
+        parsed.searchParams.set('searchString', searchString);
+        parsed.searchParams.set('page', '1');
+        return parsed.toString();
+      } catch {
+        return this.buildLegoSearchUrl(searchString);
+      }
+    }
+
+    return rawUrl;
+  }
+
+  private buildLegoSearchUrl(searchString: string): string {
+    return `https://www.lego.com/en-us/service/building-instructions/search-results?searchString=${encodeURIComponent(searchString)}&page=1`;
+  }
+
+  private toLegoSearchString(setNum: string): string {
+    const normalized = String(setNum ?? '').trim();
+    if (!normalized) {
+      return '';
+    }
+    const dashIndex = normalized.indexOf('-');
+    if (dashIndex <= 0) {
+      return normalized;
+    }
+    return normalized.slice(0, dashIndex);
+  }
+
+  private loadInstructionsForSet(setNum: string): void {
+    if (!setNum) {
+      return;
+    }
+
+    const cached = this.instructionMap()[setNum];
+    if (cached) {
+      return;
+    }
+
+    this.instructionsLoading.set(true);
+    this.setsCatalogApi.getCatalogSetInstructions(setNum).subscribe({
+      next: (response) => {
+        this.instructionsLoading.set(false);
+        this.instructionMap.update((current) => ({
+          ...current,
+          [setNum]: Array.isArray(response.instructions) ? response.instructions : []
+        }));
+      },
+      error: () => {
+        this.instructionsLoading.set(false);
+        this.instructionsError.set('Failed to load instruction links.');
+      }
+    });
   }
 }

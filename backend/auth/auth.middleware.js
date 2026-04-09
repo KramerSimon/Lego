@@ -31,4 +31,13 @@ function authenticateRequest(request, response, next) {
   }
 }
 
-export { authenticateRequest };
+function requireAdmin(request, response, next) {
+  const isAdmin = Number(request.auth?.is_admin ?? 0) > 0;
+  if (!isAdmin) {
+    response.status(403).json({ error: 'Admin access required' });
+    return;
+  }
+  next();
+}
+
+export { authenticateRequest, requireAdmin };

@@ -16,21 +16,7 @@
             [formControlName]="field.key"
           />
 
-          <mat-select *ngIf="field.type === 'select'" [formControlName]="field.key">
-            <mat-option class="search-option" *ngIf="field.optionSource?.searchParam" disabled>
-              <div class="search-input-wrap" (click)="$event.stopPropagation()">
-                <mat-icon>search</mat-icon>
-                <input
-                  matInput
-                  placeholder="Search by set number or name"
-                  [value]="getSelectSearch()(field)"
-                  (click)="$event.stopPropagation()"
-                  (keydown)="$event.stopPropagation()"
-                  (input)="onSelectSearch(field, $any($event.target).value)"
-                />
-              </div>
-            </mat-option>
-
+          <mat-select *ngIf="field.type === 'select' && !field.optionSource?.searchParam" [formControlName]="field.key">
             <mat-option *ngFor="let option of getOptions()(field)" [value]="option.value">
               {{ option.label }}
             </mat-option>
@@ -42,6 +28,27 @@
               </button>
             </mat-option>
           </mat-select>
+
+          <ng-container *ngIf="field.type === 'select' && field.optionSource?.searchParam">
+            <input
+              matInput
+              [formControlName]="field.key"
+              [matAutocomplete]="searchAuto"
+              (input)="onSelectSearch(field, $any($event.target).value)"
+              [placeholder]="'Search ' + field.label.toLowerCase()"
+            />
+            <mat-autocomplete #searchAuto="matAutocomplete" [displayWith]="displaySelectOption(field)">
+              <mat-option *ngFor="let option of getOptions()(field)" [value]="option.value">
+                {{ option.label }}
+              </mat-option>
+              <mat-option *ngIf="hasMoreOptions()(field)" class="load-more-option">
+                <button mat-button type="button" (click)="onLoadMore(field, $event)" [disabled]="isSelectLoading()(field)">
+                  <span *ngIf="!isSelectLoading()(field)">Load more</span>
+                  <span *ngIf="isSelectLoading()(field)">Loading...</span>
+                </button>
+              </mat-option>
+            </mat-autocomplete>
+          </ng-container>
         </mat-form-field>
 
         <mat-checkbox *ngIf="field.type === 'checkbox'" [formControlName]="field.key">

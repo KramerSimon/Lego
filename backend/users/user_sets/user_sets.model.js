@@ -111,18 +111,28 @@ function deriveOwnedCompleteFlag(partSelections, multiplier) {
 async function getAll(query = {}) {
   try {
     const { page, pageSize, offset } = database.parsePagination(query);
-    const countSql = `SELECT COUNT(*) AS total FROM ${tableName}`;
+    const requestedUserId = Number(query.user_id);
+    const hasUserFilter = Number.isFinite(requestedUserId) && requestedUserId > 0;
+    const countSql = hasUserFilter
+      ? `SELECT COUNT(*) AS total FROM ${tableName} WHERE user_id = ?`
+      : `SELECT COUNT(*) AS total FROM ${tableName}`;
     const dataSql = `
       SELECT us.*, s.name AS set_name, s.img_url
       FROM ${tableName} us
       LEFT JOIN sets s ON s.set_num = us.set_num
+      ${hasUserFilter ? 'WHERE us.user_id = ?' : ''}
       ORDER BY us.${idColumn} DESC
       LIMIT ? OFFSET ?
     `;
 
+    const countParams = hasUserFilter ? [requestedUserId] : [];
+    const dataParams = hasUserFilter
+      ? [requestedUserId, pageSize, offset]
+      : [pageSize, offset];
+
     const [countRows, dataRows] = await Promise.all([
-      database.query(countSql),
-      database.query(dataSql, [pageSize, offset])
+      database.query(countSql, countParams),
+      database.query(dataSql, dataParams)
     ]);
 
     const total = Number(countRows?.[0]?.total ?? 0);
@@ -135,6 +145,20 @@ async function getAll(query = {}) {
       total,
       totalPages
     };
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
+async function getOwnerUserId(userSetId) {
+  try {
+    const sql = `SELECT user_id FROM ${tableName} WHERE ${idColumn} = ? LIMIT 1`;
+    const rows = await database.queryClose(sql, [userSetId]);
+    const ownerId = Number(rows?.[0]?.user_id);
+    if (!Number.isFinite(ownerId) || ownerId <= 0) {
+      return null;
+    }
+    return ownerId;
   } catch (error) {
     return Promise.reject(error);
   }
@@ -571,6 +595,7 @@ async function deleteUserSet(id) {
 
 export default {
   getAll,
+  getOwnerUserId,
   getItem,
   add,
   addWithParts,

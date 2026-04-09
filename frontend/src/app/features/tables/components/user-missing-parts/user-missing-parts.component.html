@@ -16,45 +16,41 @@
 
 			<mat-form-field appearance="outline">
 				<mat-label>Set Number</mat-label>
-				<mat-select formControlName="set_num" panelClass="lego-select-panel" (openedChange)="handleSetPanelOpened($event)">
+				<input
+					matInput
+					formControlName="set_num"
+					[matAutocomplete]="setAuto"
+					(focus)="handleSetPanelOpened(true)"
+					(input)="handleSetSearchInput($any($event.target).value)"
+					placeholder="Search set number or name"
+				/>
+				<mat-autocomplete #setAuto="matAutocomplete">
 					<mat-option [value]="''">All sets</mat-option>
-
-					<mat-option class="set-search-option" disabled>
-						<div class="search-input-wrap" (click)="$event.stopPropagation()">
-							<mat-icon>search</mat-icon>
-							<input
-								matInput
-								[value]="setSearchTerm()"
-								(input)="handleSetSearchInput($any($event.target).value)"
-								(click)="$event.stopPropagation()"
-								(keydown)="$event.stopPropagation()"
-								placeholder="Search set number or name"
-							/>
-						</div>
-					</mat-option>
-
 					<mat-option *ngIf="loadingSetOptions()" disabled>Loading sets...</mat-option>
-
 					<mat-option *ngFor="let set of sets()" [value]="set.set_num">
 						<div class="set-option">
 							<img *ngIf="asImageUrl(set.img_url) as setImg" [src]="setImg" alt="set" class="set-option-thumb" loading="lazy" />
 							<span>{{ set.label }}</span>
 						</div>
 					</mat-option>
-
 					<mat-option *ngIf="!loadingSetOptions() && sets().length === 0" disabled>No matching sets found</mat-option>
-					<mat-option *ngIf="!loadingSetOptions() && hasMoreSetOptions()" class="set-load-more-option" disabled>
-						<button mat-button type="button" (click)="loadMoreSetOptions($event)">Load more sets</button>
-					</mat-option>
-				</mat-select>
+				</mat-autocomplete>
 			</mat-form-field>
 
 			<mat-form-field appearance="outline">
 				<mat-label>Theme</mat-label>
-				<mat-select formControlName="theme_id">
+				<input
+					matInput
+					[value]="themeSearchTerm()"
+					(input)="handleThemeSearchInput($any($event.target).value)"
+					[matAutocomplete]="themeAuto"
+					placeholder="All themes"
+				/>
+				<mat-autocomplete #themeAuto="matAutocomplete" (optionSelected)="selectTheme($any($event.option.value))">
 					<mat-option [value]="null">All themes</mat-option>
-					<mat-option *ngFor="let theme of themes()" [value]="theme.id">{{ theme.name }}</mat-option>
-				</mat-select>
+					<mat-option *ngFor="let theme of filteredThemes()" [value]="theme.id">{{ theme.name }}</mat-option>
+					<mat-option *ngIf="filteredThemes().length === 0" disabled>No matching categories found</mat-option>
+				</mat-autocomplete>
 			</mat-form-field>
 
 			<mat-form-field class="search-field" appearance="outline">

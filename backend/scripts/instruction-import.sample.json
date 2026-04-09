@@ -1,0 +1,23 @@
+[
+  {
+    "set_num": "1039-1",
+    "instructions": [
+      {
+        "source": "brickset",
+        "source_label": "Brickset API",
+        "url": "https://example.com/instructions/1039-1/booklet-1.pdf",
+        "name": "Booklet 1",
+        "type": "booklet",
+        "sort_order": 0
+      },
+      {
+        "source": "brickset",
+        "source_label": "Brickset API",
+        "url": "https://example.com/instructions/1039-1/booklet-2.pdf",
+        "name": "Booklet 2",
+        "type": "booklet",
+        "sort_order": 1
+      }
+    ]
+  }
+]

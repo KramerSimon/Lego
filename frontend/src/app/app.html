@@ -42,10 +42,15 @@
 		</ng-container>
 	</mat-toolbar>
 
-	<ng-container *ngIf="auth.user(); else loginOnly">
+	<ng-container *ngIf="auth.user() as user; else loginOnly">
 		<section class="hero-copy">
-			<h1>Build Desk</h1>
-			<p>Plan builds, track missing pieces, and browse your LEGO catalog in one place.</p>
+			<div class="hero-intro">
+				<img src="/icons/LegoBrickBuilder.png" alt="Build Desk" class="hero-logo" />
+				<div class="hero-text">
+					<h1>Build Desk</h1>
+					<p>Plan builds, track missing pieces, and browse your LEGO catalog in one place.</p>
+				</div>
+			</div>
 		</section>
 
 		<mat-tab-group class="top-tabs" animationDuration="300ms">
@@ -73,7 +78,7 @@
 				</ng-template>
 			</mat-tab>
 
-			<mat-tab label="All Tables">
+			<mat-tab *ngIf="user.is_admin" label="All Tables">
 				<ng-template matTabContent>
 					<mat-tab-group class="nested-tabs" animationDuration="250ms">
 						<mat-tab label="Inventories"><ng-template matTabContent><lego-inventories></lego-inventories></ng-template></mat-tab>

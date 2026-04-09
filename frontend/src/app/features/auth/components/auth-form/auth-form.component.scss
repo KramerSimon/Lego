@@ -1,8 +1,27 @@
+.auth-mode-switch {
+  display: inline-flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.auth-mode-switch .active {
+  border-color: var(--accent-color, #2e7d32);
+  color: var(--accent-color, #2e7d32);
+}
+
 .auth-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   align-items: end;
+}
+
+.register-form {
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.auth-form-span-2 {
+  grid-column: span 2;
 }
 
 .auth-actions {
@@ -27,6 +46,10 @@
 @media (max-width: 700px) {
   .auth-form {
     grid-template-columns: 1fr;
+  }
+
+  .auth-form-span-2 {
+    grid-column: span 1;
   }
 
   .auth-actions,

@@ -288,6 +288,11 @@ mat-paginator {
 	background: transparent;
 }
 
+.cdk-overlay-pane .mat-mdc-select-panel .mat-mdc-option.search-option.mdc-list-item--disabled,
+.cdk-overlay-pane .mat-mdc-select-panel .mat-mdc-option.set-search-option.mdc-list-item--disabled {
+	pointer-events: auto;
+}
+
 .cdk-overlay-pane .mat-mdc-select-panel .mat-mdc-option.search-option:hover,
 .cdk-overlay-pane .mat-mdc-select-panel .mat-mdc-option.set-search-option:hover {
 	background: transparent;

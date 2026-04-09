@@ -3,6 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -11,7 +12,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
-import { CatalogSetPart, CatalogSetPartsResponse, PagedResult } from '../../../../core/services/api-types';
+import { CatalogSetPart, CatalogSetPartsResponse, PagedResult, SetInstruction, SetInstructionsResponse } from '../../../../core/services/api-types';
 import { SetsApiService } from '../../../../core/services/sets-api.service';
 import { SetsTableApiService, ThemesApiService } from '../../../../core/services/tables/table-services.service';
 import { SETS_CONFIG } from '../../config/table-definitions';
@@ -23,6 +24,7 @@ import { SETS_CONFIG } from '../../config/table-definitions';
     CommonModule,
     FormsModule,
     MatCardModule,
+    MatAutocompleteModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -70,12 +72,22 @@ export class SetsComponent {
   readonly expandedLoading = signal(false);
   readonly expandedPartsMap = signal<Record<string, CatalogSetPart[]>>({});
   readonly expandedError = signal<string | null>(null);
+  readonly expandedInstructionsLoading = signal(false);
+  readonly expandedInstructionsMap = signal<Record<string, SetInstruction[]>>({});
+  readonly expandedInstructionsError = signal<string | null>(null);
   readonly expandedParts = computed(() => {
     const setNum = this.expandedSetNum();
     if (!setNum) {
       return [];
     }
     return this.expandedPartsMap()[setNum] ?? [];
+  });
+  readonly expandedInstructions = computed(() => {
+    const setNum = this.expandedSetNum();
+    if (!setNum) {
+      return [];
+    }
+    return this.expandedInstructionsMap()[setNum] ?? [];
   });
 
   constructor() {
@@ -91,7 +103,8 @@ export class SetsComponent {
 
   applySearch(): void {
     this.appliedSearch.set(this.searchTerm().trim());
-    const nextThemeId = this.selectedThemeId();
+    const nextThemeId = this.resolveThemeIdFromSearch();
+    this.selectedThemeId.set(nextThemeId);
     this.appliedThemeId.set(typeof nextThemeId === 'number' && nextThemeId > 0 ? nextThemeId : null);
     this.page.set(1);
     this.expandedSetNum.set(null);
@@ -114,14 +127,21 @@ export class SetsComponent {
     this.reload();
   }
 
-  handleThemePanelOpened(opened: boolean): void {
-    if (opened) {
-      this.themeSearchTerm.set('');
-    }
-  }
-
   handleThemeSearchInput(value: string): void {
     this.themeSearchTerm.set(value);
+    this.selectedThemeId.set(null);
+  }
+
+  selectTheme(themeId: number | null): void {
+    if (typeof themeId !== 'number' || themeId <= 0) {
+      this.selectedThemeId.set(null);
+      this.themeSearchTerm.set('');
+      return;
+    }
+
+    const selected = this.themeOptions().find((theme) => theme.id === themeId) ?? null;
+    this.selectedThemeId.set(themeId);
+    this.themeSearchTerm.set(selected ? selected.name : '');
   }
 
   toggleExpand(row: Record<string, unknown>): void {
@@ -133,31 +153,126 @@ export class SetsComponent {
     if (this.expandedSetNum() === setNum) {
       this.expandedSetNum.set(null);
       this.expandedError.set(null);
+      this.expandedInstructionsError.set(null);
       return;
     }
 
     this.expandedSetNum.set(setNum);
     this.expandedError.set(null);
+    this.expandedInstructionsError.set(null);
 
-    const cached = this.expandedPartsMap()[setNum];
-    if (cached) {
+    this.ensureExpandedData(setNum);
+  }
+
+  openInstruction(instruction: SetInstruction | unknown, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    const href = this.resolveInstructionUrl(instruction);
+    if (!href) {
       return;
     }
 
-    this.expandedLoading.set(true);
-    this.setsApi.getCatalogSetParts(setNum).subscribe({
-      next: (response: CatalogSetPartsResponse) => {
-        this.expandedLoading.set(false);
-        this.expandedPartsMap.update((current) => ({
-          ...current,
-          [setNum]: Array.isArray(response.parts) ? response.parts : []
-        }));
-      },
-      error: () => {
-        this.expandedLoading.set(false);
-        this.expandedError.set('Failed to load set parts.');
+    window.open(href, '_blank', 'noopener');
+  }
+
+  private resolveInstructionUrl(instruction: SetInstruction | unknown): string | null {
+    const maybeInstruction = (instruction && typeof instruction === 'object')
+      ? (instruction as Partial<SetInstruction>)
+      : null;
+
+    const setNum = String(maybeInstruction?.set_num ?? '').trim();
+    const searchString = this.toLegoSearchString(setNum);
+    const source = String(maybeInstruction?.source ?? '').toLowerCase();
+    const type = String(maybeInstruction?.instruction_type ?? '').toLowerCase();
+    const rawUrl = this.asAbsoluteUrl(maybeInstruction?.url ?? instruction);
+
+    if ((source === 'lego' || type === 'instructions-search') && searchString) {
+      if (!rawUrl) {
+        return this.buildLegoSearchUrl(searchString);
       }
-    });
+
+      try {
+        const parsed = new URL(rawUrl);
+        parsed.pathname = '/en-us/service/building-instructions/search-results';
+        parsed.searchParams.set('searchString', searchString);
+        parsed.searchParams.set('page', '1');
+        return parsed.toString();
+      } catch {
+        return this.buildLegoSearchUrl(searchString);
+      }
+    }
+
+    return rawUrl;
+  }
+
+  private buildLegoSearchUrl(searchString: string): string {
+    return `https://www.lego.com/en-us/service/building-instructions/search-results?searchString=${encodeURIComponent(searchString)}&page=1`;
+  }
+
+  private toLegoSearchString(setNum: string): string {
+    const normalized = String(setNum ?? '').trim();
+    if (!normalized) {
+      return '';
+    }
+    const dashIndex = normalized.indexOf('-');
+    if (dashIndex <= 0) {
+      return normalized;
+    }
+    return normalized.slice(0, dashIndex);
+  }
+
+  asAbsoluteUrl(value: unknown): string | null {
+    if (typeof value !== 'string') {
+      return null;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    return null;
+  }
+
+  private ensureExpandedData(setNum: string): void {
+    const cachedParts = this.expandedPartsMap()[setNum];
+    if (!cachedParts) {
+      this.expandedLoading.set(true);
+      this.setsApi.getCatalogSetParts(setNum).subscribe({
+        next: (response: CatalogSetPartsResponse) => {
+          this.expandedLoading.set(false);
+          this.expandedPartsMap.update((current) => ({
+            ...current,
+            [setNum]: Array.isArray(response.parts) ? response.parts : []
+          }));
+        },
+        error: () => {
+          this.expandedLoading.set(false);
+          this.expandedError.set('Failed to load set parts.');
+        }
+      });
+    }
+
+    const cachedInstructions = this.expandedInstructionsMap()[setNum];
+    if (!cachedInstructions) {
+      this.expandedInstructionsLoading.set(true);
+      this.setsApi.getCatalogSetInstructions(setNum).subscribe({
+        next: (response: SetInstructionsResponse) => {
+          this.expandedInstructionsLoading.set(false);
+          this.expandedInstructionsMap.update((current) => ({
+            ...current,
+            [setNum]: Array.isArray(response.instructions) ? response.instructions : []
+          }));
+        },
+        error: () => {
+          this.expandedInstructionsLoading.set(false);
+          this.expandedInstructionsError.set('Failed to load instruction links.');
+        }
+      });
+    }
   }
 
   isExpanded(row: Record<string, unknown>): boolean {
@@ -260,5 +375,24 @@ export class SetsComponent {
         this.themeOptions.set([]);
       }
     });
+  }
+
+  private resolveThemeIdFromSearch(): number | null {
+    const selectedThemeId = this.selectedThemeId();
+    if (typeof selectedThemeId === 'number' && selectedThemeId > 0) {
+      return selectedThemeId;
+    }
+
+    const term = this.themeSearchTerm().trim().toLowerCase();
+    if (!term) {
+      return null;
+    }
+
+    const exact = this.themeOptions().find((theme) => theme.name.toLowerCase() === term || String(theme.id) === term);
+    if (exact) {
+      return exact.id;
+    }
+
+    return null;
   }
 }

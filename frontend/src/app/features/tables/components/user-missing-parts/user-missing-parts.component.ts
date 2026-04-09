@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -21,6 +22,7 @@ import { SetsTableApiService, ThemesApiService, UsersApiService } from '../../..
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    MatAutocompleteModule,
     MatButtonModule,
     MatCardModule,
     MatFormFieldModule,
@@ -53,6 +55,16 @@ export class UserMissingPartsComponent implements OnInit {
   readonly pageSizeOptions = [10, 25, 50, 100, 200];
   readonly users = signal<Array<{ user_id: number; label: string }>>([]);
   readonly themes = signal<Array<{ id: number; name: string }>>([]);
+  readonly themeSearchTerm = signal('');
+  readonly filteredThemes = computed(() => {
+    const term = this.themeSearchTerm().trim().toLowerCase();
+    if (!term) {
+      return this.themes();
+    }
+    return this.themes().filter((theme) => {
+      return theme.name.toLowerCase().includes(term) || String(theme.id).includes(term);
+    });
+  });
   readonly sets = signal<Array<{ set_num: string; label: string; img_url?: string }>>([]);
   readonly setSearchTerm = signal('');
   readonly setOptionsPage = signal(1);
@@ -86,6 +98,29 @@ export class UserMissingPartsComponent implements OnInit {
       this.setSearchTerm.set('');
       this.searchSetOptions('', true);
     }
+  }
+
+  handleThemePanelOpened(opened: boolean): void {
+    if (opened) {
+      this.themeSearchTerm.set('');
+    }
+  }
+
+  handleThemeSearchInput(rawValue: string): void {
+    this.themeSearchTerm.set(rawValue);
+    this.filters.controls.theme_id.setValue(null, { emitEvent: false });
+  }
+
+  selectTheme(themeId: number | null): void {
+    if (typeof themeId !== 'number' || themeId <= 0) {
+      this.filters.controls.theme_id.setValue(null, { emitEvent: false });
+      this.themeSearchTerm.set('');
+      return;
+    }
+
+    const selected = this.themes().find((theme) => theme.id === themeId) ?? null;
+    this.filters.controls.theme_id.setValue(themeId, { emitEvent: false });
+    this.themeSearchTerm.set(selected ? selected.name : '');
   }
 
   handleSetSearchInput(rawValue: string): void {
@@ -132,6 +167,7 @@ export class UserMissingPartsComponent implements OnInit {
       search: ''
     });
     this.setSearchTerm.set('');
+    this.themeSearchTerm.set('');
     this.page.set(1);
     this.reload();
   }
@@ -250,8 +286,8 @@ export class UserMissingPartsComponent implements OnInit {
       filters.user_id = userId;
     }
 
-    const themeId = Number(raw.theme_id);
-    if (Number.isFinite(themeId) && themeId > 0) {
+    const themeId = this.resolveThemeId(raw.theme_id);
+    if (typeof themeId === 'number' && themeId > 0) {
       filters.theme_id = themeId;
     }
 
@@ -280,5 +316,20 @@ export class UserMissingPartsComponent implements OnInit {
         this.snackBar.open('Failed to load missing parts.', 'Close', { duration: 3000 });
       }
     });
+  }
+
+  private resolveThemeId(rawValue: unknown): number | null {
+    const numericThemeId = Number(rawValue);
+    if (Number.isFinite(numericThemeId) && numericThemeId > 0) {
+      return numericThemeId;
+    }
+
+    const term = this.themeSearchTerm().trim().toLowerCase();
+    if (!term) {
+      return null;
+    }
+
+    const exact = this.themes().find((theme) => theme.name.toLowerCase() === term || String(theme.id) === term);
+    return exact ? exact.id : null;
   }
 }

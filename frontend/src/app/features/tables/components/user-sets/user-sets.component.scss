@@ -284,13 +284,7 @@ button[mat-stroked-button][disabled] {
 }
 
 .expand-btn {
-  border: 1px solid #7fb4c2;
-  background: #f3fafc;
-  color: #0b7285;
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-weight: 600;
-  cursor: pointer;
+  white-space: nowrap;
 }
 
 .catalog-actions {
@@ -346,6 +340,22 @@ button[mat-stroked-button][disabled] {
   display: block;
 }
 
+.instructions-panel {
+  margin-bottom: 10px;
+}
+
+.instruction-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.instruction-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .table-thumb {
   width: 38px;
   height: 38px;
@@ -378,12 +388,6 @@ button[mat-stroked-button][disabled] {
 
 :host-context([data-theme='dark']) mat-divider {
   border-top-color: var(--lego-table-border) !important;
-}
-
-:host-context([data-theme='dark']) .expand-btn {
-  background: var(--lego-btn-stroked-bg);
-  border-color: var(--lego-btn-stroked-border);
-  color: var(--lego-btn-stroked-fg);
 }
 
 :host-context([data-theme='dark']) button[mat-stroked-button],

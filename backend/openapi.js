@@ -33,6 +33,16 @@ const openApiSpec = {
           password: { type: 'string', example: 'x&#XtZ4l,6eTm3ZaD3R1' }
         }
       },
+      RegisterRequest: {
+        type: 'object',
+        required: ['username', 'email', 'password'],
+        properties: {
+          username: { type: 'string', example: 'simon' },
+          email: { type: 'string', example: 'simon@example.com' },
+          full_name: { type: 'string', nullable: true, example: 'Simon Builder' },
+          password: { type: 'string', example: 'x&#XtZ4l,6eTm3ZaD3R1' }
+        }
+      },
       LoginResponse: {
         type: 'object',
         properties: {
@@ -133,6 +143,46 @@ const openApiSpec = {
         }
       }
     },
+    '/auth/register': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Create a new user account',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/RegisterRequest' }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'Registered and authenticated',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/LoginResponse' }
+              }
+            }
+          },
+          '400': {
+            description: 'Validation error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          '409': {
+            description: 'Duplicate username or email',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      }
+    },
     '/auth/me': {
       get: {
         tags: ['Auth'],
@@ -186,6 +236,19 @@ const openApiSpec = {
         ],
         responses: {
           '200': { description: 'Set parts data' }
+        }
+      }
+    },
+    '/sets/{id}/instructions': {
+      get: {
+        tags: ['Sets'],
+        summary: 'Get instruction links for a set',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          '200': { description: 'Set instruction links' }
         }
       }
     },

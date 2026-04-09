@@ -39,23 +39,23 @@ mat-card-subtitle {
 }
 
 :host ::ng-deep .search-bar .mat-mdc-form-field {
-  --mdc-outlined-text-field-label-text-color: #2e4e5b;
-  --mdc-outlined-text-field-focus-label-text-color: #0b7285;
-  --mdc-outlined-text-field-hover-label-text-color: #1e3f4d;
-  --mdc-outlined-text-field-input-text-color: #102c38;
-  --mdc-outlined-text-field-caret-color: #0b7285;
-  --mdc-outlined-text-field-outline-color: #a9c0ca;
-  --mdc-outlined-text-field-hover-outline-color: #6d8f9c;
-  --mdc-outlined-text-field-focus-outline-color: #0b7285;
+  --mdc-outlined-text-field-label-text-color: var(--lego-form-label);
+  --mdc-outlined-text-field-focus-label-text-color: var(--lego-accent);
+  --mdc-outlined-text-field-hover-label-text-color: var(--lego-form-label);
+  --mdc-outlined-text-field-input-text-color: var(--lego-form-ink);
+  --mdc-outlined-text-field-caret-color: var(--lego-accent);
+  --mdc-outlined-text-field-outline-color: color-mix(in srgb, var(--lego-form-label) 45%, transparent);
+  --mdc-outlined-text-field-hover-outline-color: color-mix(in srgb, var(--lego-form-label) 70%, transparent);
+  --mdc-outlined-text-field-focus-outline-color: var(--lego-accent);
 }
 
 :host ::ng-deep .search-bar .mat-mdc-form-field .mdc-text-field--outlined {
-  background: #ffffff;
+  background: var(--lego-card-bg);
   border-radius: 10px;
 }
 
 :host ::ng-deep .search-bar .mdc-floating-label--float-above {
-  background: #ffffff;
+  background: var(--lego-card-bg);
   padding: 0 6px;
   border-radius: 6px;
 }
@@ -63,11 +63,11 @@ mat-card-subtitle {
 :host ::ng-deep .search-bar .mat-mdc-input-element,
 :host ::ng-deep .search-bar .mat-mdc-select-value,
 :host ::ng-deep .search-bar .mat-mdc-select-placeholder {
-  color: #102c38 !important;
+  color: var(--lego-form-ink) !important;
 }
 
 :host ::ng-deep .search-bar .mat-mdc-select-arrow {
-  color: #5a7986;
+  color: var(--lego-form-label);
 }
 
 :host ::ng-deep .lego-select-panel.mat-mdc-select-panel {
@@ -171,13 +171,7 @@ tr.detail-row {
 }
 
 .expand-btn {
-  border: 1px solid #7fb4c2;
-  background: #f3fafc;
-  color: #0b7285;
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-weight: 600;
-  cursor: pointer;
+  white-space: nowrap;
 }
 
 .expanded-panel {
@@ -209,6 +203,26 @@ tr.detail-row {
 .expanded-panel h3 {
   margin: 0 0 10px;
   color: #1c4553;
+}
+
+.instructions-panel {
+  margin-bottom: 10px;
+}
+
+.instruction-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.instruction-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.muted {
+  color: #5e7a85;
 }
 
 .parts-grid {
