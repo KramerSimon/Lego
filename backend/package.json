@@ -11,13 +11,16 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate": "npm run migrate:profile-image",
+    "migrate:profile-image": "node scripts/migrate-add-profile-image-url.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
     "mysql": "^2.18.1",
     "nodemon": "^3.1.14",
     "swagger-ui-express": "^5.0.1"

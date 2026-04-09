@@ -4,18 +4,16 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatOptionModule } from '@angular/material/core';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
-import {
-  CatalogSetPart,
-  CatalogSetPartsResponse,
-  LegoApiService,
-  PagedResult
-} from '../../../../core/services/lego-api.service';
+import { CatalogSetPart, CatalogSetPartsResponse, PagedResult } from '../../../../core/services/api-types';
+import { SetsApiService } from '../../../../core/services/sets-api.service';
+import { SetsTableApiService, ThemesApiService } from '../../../../core/services/tables/table-services.service';
 import { SETS_CONFIG } from '../../config/table-definitions';
 
 @Component({
@@ -26,6 +24,7 @@ import { SETS_CONFIG } from '../../config/table-definitions';
     FormsModule,
     MatCardModule,
     MatFormFieldModule,
+    MatIconModule,
     MatInputModule,
     MatSelectModule,
     MatOptionModule,
@@ -39,7 +38,9 @@ import { SETS_CONFIG } from '../../config/table-definitions';
 })
 export class SetsComponent {
   readonly config = SETS_CONFIG;
-  private readonly api = inject(LegoApiService);
+  private readonly setsTableApi = inject(SetsTableApiService);
+  private readonly themesApi = inject(ThemesApiService);
+  private readonly setsApi = inject(SetsApiService);
 
   readonly loading = signal(false);
   readonly rows = signal<Record<string, unknown>[]>([]);
@@ -144,7 +145,7 @@ export class SetsComponent {
     }
 
     this.expandedLoading.set(true);
-    this.api.getCatalogSetParts(setNum).subscribe({
+    this.setsApi.getCatalogSetParts(setNum).subscribe({
       next: (response: CatalogSetPartsResponse) => {
         this.expandedLoading.set(false);
         this.expandedPartsMap.update((current) => ({
@@ -220,7 +221,7 @@ export class SetsComponent {
     if (themeId) {
       extraParams['themeId'] = themeId;
     }
-    this.api.getRows('sets', this.page(), this.pageSize(), extraParams).subscribe({
+    this.setsTableApi.getRows(this.page(), this.pageSize(), extraParams).subscribe({
       next: (response) => {
         this.loading.set(false);
         if (Array.isArray(response)) {
@@ -239,7 +240,7 @@ export class SetsComponent {
   }
 
   private loadThemeOptions(): void {
-    this.api.getRows('themes', 1, 5000).subscribe({
+    this.themesApi.getRows(1, 5000).subscribe({
       next: (response) => {
         const rows = Array.isArray(response) ? response : (response as PagedResult).data ?? [];
         const options = rows

@@ -1,13 +1,14 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { catchError, map, of, tap } from 'rxjs';
-import { AuthUser, LegoApiService } from './lego-api.service';
+import { AuthUser } from './api-types';
+import { AuthApiService } from './auth-api.service';
 
 const TOKEN_KEY = 'lego_auth_token';
 const USER_KEY = 'lego_auth_user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly api = inject(LegoApiService);
+  private readonly api = inject(AuthApiService);
 
   readonly token = signal<string | null>(null);
   readonly user = signal<AuthUser | null>(null);
@@ -16,21 +17,29 @@ export class AuthService {
   constructor() {
     const savedToken = localStorage.getItem(TOKEN_KEY);
     const savedUser = localStorage.getItem(USER_KEY);
-    if (savedToken) {
-      this.token.set(savedToken);
+    if (!savedToken) {
+      // Keep local auth state consistent: user identity without a token is invalid.
+      if (savedUser) {
+        localStorage.removeItem(USER_KEY);
+      }
+      return;
     }
+
+    this.token.set(savedToken);
+
     if (savedUser) {
       try {
         this.user.set(JSON.parse(savedUser) as AuthUser);
       } catch {
         this.user.set(null);
+        localStorage.removeItem(USER_KEY);
       }
     }
   }
 
   login(identifier: string, password: string) {
     this.authenticating.set(true);
-    return this.api.authLogin(identifier, password).pipe(
+    return this.api.login(identifier, password).pipe(
       tap((response) => {
         this.authenticating.set(false);
         this.token.set(response.token);
@@ -44,6 +53,20 @@ export class AuthService {
         return of(false);
       })
     );
+  }
+
+  refreshMyAccount() {
+    return this.api.getMyAccount().pipe(
+      tap((response) => {
+        this.setCurrentUser(response.user);
+      }),
+      map((response) => response.user)
+    );
+  }
+
+  setCurrentUser(user: AuthUser): void {
+    this.user.set(user);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
   }
 
   logout(): void {

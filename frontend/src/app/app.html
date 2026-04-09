@@ -5,7 +5,41 @@
 			<span>{{ title }}</span>
 		</div>
 		<span class="spacer"></span>
-		<button class="logout-btn" mat-stroked-button type="button" *ngIf="auth.user()" (click)="auth.logout()">Logout</button>
+		<button class="theme-btn" mat-stroked-button type="button" (click)="toggleTheme()">
+			<mat-icon>{{ theme() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+			{{ theme() === 'dark' ? 'Light' : 'Dark' }}
+		</button>
+		<ng-container *ngIf="auth.user() as user">
+			<button class="account-btn" mat-stroked-button type="button" [matMenuTriggerFor]="accountMenu">
+				<span class="avatar-chip" [class.has-image]="profileImageUrl(user)">
+					<img *ngIf="profileImageUrl(user) as profileImg" [src]="profileImg" alt="Profile" />
+					<mat-icon *ngIf="!profileImageUrl(user)">person</mat-icon>
+				</span>
+				<span class="account-label">{{ user.username }}</span>
+				<mat-icon>expand_more</mat-icon>
+			</button>
+
+			<mat-menu #accountMenu="matMenu" class="account-menu lego-select-panel account-menu-panel">
+				<div class="account-menu-header">
+					<div class="account-avatar-large" [class.has-image]="profileImageUrl(user)">
+						<img *ngIf="profileImageUrl(user) as profileImg" [src]="profileImg" alt="Profile" class="account-avatar-image-large" width="46" height="46" />
+						<mat-icon *ngIf="!profileImageUrl(user)">person</mat-icon>
+					</div>
+					<div class="account-menu-copy">
+						<div class="account-name">{{ user.full_name || user.username }}</div>
+						<div class="account-email">{{ user.email || 'No email set' }}</div>
+					</div>
+				</div>
+				<button mat-menu-item type="button" (click)="openAccountSettings()">
+					<mat-icon>manage_accounts</mat-icon>
+					<span>Account Settings</span>
+				</button>
+				<button mat-menu-item type="button" (click)="auth.logout()">
+					<mat-icon>logout</mat-icon>
+					<span>Logout</span>
+				</button>
+			</mat-menu>
+		</ng-container>
 	</mat-toolbar>
 
 	<ng-container *ngIf="auth.user(); else loginOnly">
@@ -19,6 +53,14 @@
 				<ng-template matTabContent>
 					<div class="nested-tabs">
 						<lego-user-sets></lego-user-sets>
+					</div>
+				</ng-template>
+			</mat-tab>
+
+			<mat-tab label="Missing Parts">
+				<ng-template matTabContent>
+					<div class="nested-tabs">
+						<lego-user-missing-parts></lego-user-missing-parts>
 					</div>
 				</ng-template>
 			</mat-tab>

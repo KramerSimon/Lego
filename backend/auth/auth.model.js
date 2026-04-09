@@ -13,8 +13,14 @@ function sanitizeUser(row) {
     user_id: row.user_id,
     username: row.username,
     email: row.email,
-    full_name: row.full_name
+    full_name: row.full_name,
+    profile_image_url: row.profile_image_url ?? null
   };
+}
+
+async function hasProfileImageColumn() {
+  const rows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['profile_image_url']);
+  return Array.isArray(rows) && rows.length > 0;
 }
 
 async function hasPasswordColumn() {
@@ -31,12 +37,14 @@ async function login(identifier, password) {
   }
 
   const passwordColumnExists = await hasPasswordColumn();
+  const profileImageColumnExists = await hasProfileImageColumn();
   if (!passwordColumnExists) {
     throw new Error('password_hash column is missing in users table');
   }
 
+  const profileSelect = profileImageColumnExists ? 'profile_image_url,' : '';
   const sql = `
-    SELECT user_id, username, email, full_name, password_hash
+    SELECT user_id, username, email, full_name, ${profileSelect} password_hash
     FROM users
     WHERE username = ? OR email = ?
     LIMIT 1
@@ -78,7 +86,9 @@ function verifyToken(token) {
 
 async function getMe(token) {
   const decoded = verifyToken(token);
-  const sql = 'SELECT user_id, username, email, full_name FROM users WHERE user_id = ? LIMIT 1';
+  const profileImageColumnExists = await hasProfileImageColumn();
+  const profileSelect = profileImageColumnExists ? 'profile_image_url' : 'NULL AS profile_image_url';
+  const sql = `SELECT user_id, username, email, full_name, ${profileSelect} FROM users WHERE user_id = ? LIMIT 1`;
   const rows = await database.query(sql, [decoded.user_id]);
   const user = rows?.[0];
   if (!user) {

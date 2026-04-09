@@ -1,0 +1,51 @@
+<h2 mat-dialog-title>Account Settings</h2>
+
+<mat-dialog-content class="settings-content">
+  <div class="avatar-block">
+    <div class="avatar-wrap" [class.has-image]="previewImageUrl()">
+      <img *ngIf="previewImageUrl() as previewImage" [src]="previewImage" alt="Profile image" class="avatar-image" />
+      <mat-icon *ngIf="!previewImageUrl()">person</mat-icon>
+    </div>
+
+    <div class="avatar-actions">
+      <label class="upload-label" for="profile-image-input">
+        <mat-icon>upload</mat-icon>
+        Upload Profile Picture
+      </label>
+      <input id="profile-image-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" (change)="handleFileChange($event)" />
+      <p class="hint">Supports JPG, PNG, WEBP, and GIF up to 8MB.</p>
+      <p class="file-name" *ngIf="selectedFileName()">{{ selectedFileName() }}</p>
+      <button *ngIf="selectedFileName()" mat-stroked-button type="button" (click)="clearSelectedFile()">Remove selected file</button>
+    </div>
+  </div>
+
+  <form class="settings-form" [formGroup]="form">
+    <mat-form-field appearance="outline">
+      <mat-label>Username</mat-label>
+      <input matInput formControlName="username" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Email</mat-label>
+      <input matInput type="email" formControlName="email" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Full Name</mat-label>
+      <input matInput formControlName="full_name" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>New Password (Optional)</mat-label>
+      <input matInput type="password" formControlName="password" autocomplete="new-password" />
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button type="button" (click)="close()" [disabled]="saving()">Cancel</button>
+  <button mat-raised-button color="primary" type="button" (click)="save()" [disabled]="saving()">
+    <mat-spinner *ngIf="saving()" diameter="18"></mat-spinner>
+    <span *ngIf="!saving()">Save Changes</span>
+  </button>
+</mat-dialog-actions>

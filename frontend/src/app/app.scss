@@ -1,15 +1,12 @@
 .page-bg {
 	min-height: 100vh;
 	padding: 20px 24px 28px;
-	background:
-		radial-gradient(circle at 10% 10%, rgba(240, 140, 0, 0.22), transparent 35%),
-		radial-gradient(circle at 90% 0%, rgba(11, 114, 133, 0.2), transparent 35%),
-		linear-gradient(160deg, #f7f8f3 0%, #e6f1f6 100%);
+	background: var(--lego-page-bg);
 }
 
 .hero-toolbar {
-	background: linear-gradient(90deg, #0f172a 0%, #111827 100%);
-	color: #f8fafc;
+	background: var(--lego-toolbar-bg);
+	color: var(--lego-toolbar-fg);
 	border-radius: 16px;
 	margin-bottom: 20px;
 	gap: 10px;
@@ -30,9 +27,186 @@
 	white-space: nowrap;
 }
 
-.logout-btn {
-	border-color: rgba(248, 250, 252, 0.45);
-	color: #f8fafc;
+.logout-btn,
+.theme-btn {
+	border-color: var(--lego-toolbar-border);
+}
+
+:host ::ng-deep .hero-toolbar .mat-mdc-outlined-button,
+:host ::ng-deep .hero-toolbar .mat-mdc-stroked-button {
+	color: var(--lego-form-ink) !important;
+}
+
+:host ::ng-deep .hero-toolbar .mat-mdc-outlined-button .mdc-button__label,
+:host ::ng-deep .hero-toolbar .mat-mdc-stroked-button .mdc-button__label,
+:host ::ng-deep .hero-toolbar .mat-mdc-outlined-button .mat-icon,
+:host ::ng-deep .hero-toolbar .mat-mdc-stroked-button .mat-icon {
+	color: var(--lego-form-ink) !important;
+}
+
+.account-btn {
+	border-color: var(--lego-toolbar-border);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0 10px;
+	min-height: 42px;
+}
+
+:host ::ng-deep .account-btn .mdc-button__label {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	line-height: 1;
+}
+
+.account-label {
+	display: inline-flex;
+	align-items: center;
+	line-height: 1;
+	vertical-align: middle;
+	max-width: 160px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.account-btn .mat-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+	vertical-align: middle;
+}
+
+.avatar-chip {
+	vertical-align: middle;
+}
+
+.avatar-chip {
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	border: 1px solid var(--lego-toolbar-border);
+	background: rgba(255, 255, 255, 0.08);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+}
+
+.avatar-chip img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.avatar-chip .mat-icon {
+	font-size: 18px;
+	width: 18px;
+	height: 18px;
+}
+
+::ng-deep .account-menu-panel .account-menu-header {
+	padding: 10px 12px;
+	display: grid;
+	grid-template-columns: 46px 1fr;
+	align-items: center;
+	column-gap: 10px;
+	border-bottom: 1px solid var(--lego-card-border);
+	margin-bottom: 0;
+}
+
+::ng-deep .account-menu-panel .account-avatar-large {
+	width: 46px;
+	height: 46px;
+	border-radius: 999px;
+	border: 1px solid var(--lego-toolbar-border);
+	background: rgba(255, 255, 255, 0.08);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	flex: 0 0 auto;
+}
+
+::ng-deep .account-menu-panel .account-avatar-large img,
+::ng-deep .account-menu-panel .account-avatar-image-large {
+	width: 100%;
+	height: 100%;
+	max-width: 46px;
+	max-height: 46px;
+	border-radius: 999px;
+	object-fit: cover;
+	display: block;
+}
+
+::ng-deep .account-menu-panel .account-avatar-large .mat-icon {
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+	color: var(--lego-form-label);
+}
+
+::ng-deep .account-menu-panel .account-menu-copy {
+	min-width: 0;
+	display: grid;
+	gap: 2px;
+}
+
+::ng-deep .account-menu-panel .account-menu-header .account-name {
+	color: var(--lego-form-ink);
+	display: block;
+	font-weight: 700;
+	line-height: 1.2;
+	word-break: break-word;
+	white-space: normal;
+}
+
+::ng-deep .account-menu-panel .account-menu-header .account-email {
+	color: var(--lego-ink-soft);
+	font-size: 0.84rem;
+	display: block;
+	line-height: 1.25;
+	word-break: break-word;
+	white-space: normal;
+	margin-top: 2px;
+}
+
+::ng-deep .account-menu-panel.mat-mdc-menu-panel {
+	background: var(--lego-card-bg);
+	border: 1px solid #cfe0e8;
+	border-radius: 12px;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+	min-width: 290px;
+	overflow: hidden !important;
+}
+
+::ng-deep .account-menu-panel .mat-mdc-menu-content {
+	overflow: hidden !important;
+}
+
+::ng-deep .account-menu-panel .mat-mdc-menu-content {
+	padding: 0;
+}
+
+::ng-deep .account-menu-panel .mat-mdc-menu-item {
+	color: var(--lego-form-ink);
+	min-height: 46px;
+	padding: 0 14px;
+}
+
+::ng-deep .account-menu-panel .mat-mdc-menu-item .mat-icon {
+	color: var(--lego-form-label);
+	margin-right: 10px;
+}
+
+::ng-deep .account-menu-panel .mat-mdc-menu-item:hover {
+	background: var(--lego-table-row-hover);
+}
+
+::ng-deep .account-menu-panel .mat-mdc-menu-item .mdc-list-item__primary-text {
+	font-weight: 600;
 }
 
 .spacer {
@@ -56,15 +230,15 @@
 .hero-copy p {
 	margin: 8px 0 0;
 	max-width: 760px;
-	color: #30505b;
+	color: var(--lego-hero-copy);
 }
 
 .top-tabs {
 	border-radius: 16px;
 	overflow: hidden;
-	background: rgba(255, 255, 255, 0.92);
+	background: var(--lego-top-tabs-bg);
 	backdrop-filter: blur(4px);
-	box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+	box-shadow: var(--lego-top-tabs-shadow);
 }
 
 .nested-tabs {
@@ -76,16 +250,16 @@
 }
 
 :host ::ng-deep .mat-mdc-tab .mdc-tab__text-label {
-	color: #45606a;
+	color: var(--lego-tab-label);
 	font-weight: 600;
 }
 
 :host ::ng-deep .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label {
-	color: #0b7285;
+	color: var(--lego-tab-label-active);
 }
 
 :host ::ng-deep .mdc-tab-indicator__content--underline {
-	border-color: #0b7285 !important;
+	border-color: var(--lego-tab-label-active) !important;
 }
 
 @media (max-width: 700px) {
@@ -111,6 +285,10 @@
 		width: auto;
 		flex: 0 0 auto;
 		min-width: 84px;
+	}
+
+	.account-label {
+		display: none;
 	}
 
 	.toolbar-title {
@@ -174,6 +352,11 @@
 		font-size: 0.82rem;
 		padding: 0 12px;
 		min-width: 78px;
+	}
+
+	.account-btn {
+		min-height: 36px;
+		padding: 0 8px;
 	}
 
 	.nested-tabs {

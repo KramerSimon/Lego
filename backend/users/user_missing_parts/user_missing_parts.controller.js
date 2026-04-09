@@ -1,4 +1,15 @@
 import userMissingPartModel from './user_missing_parts.model.js';
+
+function getUserMissingPartsCatalog(request, response) {
+  userMissingPartModel.getCatalog(request.query)
+    .then(items => {
+      response.json(items);
+    })
+    .catch(() => {
+      response.status(500).json({ error: 'Failed to retrieve missing parts catalog' });
+    });
+}
+
 function getUserMissingParts(request, response) {
   userMissingPartModel.getAll(request.query)
     .then(items => {
@@ -61,4 +72,4 @@ function deleteUserMissingPart(request, response) {
       response.status(500).json({ error: 'Failed to delete user missing part' });
     });
 }
-export { getUserMissingParts, getUserMissingPart, addUserMissingPart, updateUserMissingPart, deleteUserMissingPart };
+export { getUserMissingPartsCatalog, getUserMissingParts, getUserMissingPart, addUserMissingPart, updateUserMissingPart, deleteUserMissingPart };

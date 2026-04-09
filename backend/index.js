@@ -2,6 +2,8 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
+import path from 'path';
+import database from './database.js';
 import inventoryRouter from './inventory/inventory.router.js';
 import inventoryPartsRouter from './inventory/inventory_parts/inventory_parts.router.js';
 import partsRouter from './inventory/inventory_parts/parts/parts.router.js';
@@ -25,6 +27,7 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 app.get('/openapi.json', (request, response) => {
   response.json(openApiSpec);
 });
@@ -49,6 +52,28 @@ app.use('/users', usersRouter);
 app.use('/user_parts', userPartsRouter);
 app.use('/user_missing_parts', userMissingPartsRouter);
 app.use('/user_sets', userSetsRouter);
-app.listen(3000, () => {
-  console.log('Server is running on port 3000');
-});
+
+async function ensureSchema() {
+  const rows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['profile_image_url']);
+  const hasProfileImageColumn = Array.isArray(rows) && rows.length > 0;
+
+  if (hasProfileImageColumn) {
+    return;
+  }
+
+  await database.query(`
+    ALTER TABLE users
+    ADD COLUMN profile_image_url VARCHAR(1024) NULL AFTER password_hash
+  `);
+}
+
+ensureSchema()
+  .then(() => {
+    app.listen(3000, () => {
+      console.log('Server is running on port 3000');
+    });
+  })
+  .catch((error) => {
+    console.error('Failed to prepare database schema:', error?.message || error);
+    process.exit(1);
+  });

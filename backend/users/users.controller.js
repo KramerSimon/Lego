@@ -1,4 +1,9 @@
 import userModel from './users.model.js';
+
+function asBaseUrl(request) {
+  return `${request.protocol}://${request.get('host')}`;
+}
+
 function getUsers(request, response) {
   userModel.getAll(request.query)
     .then(inventory => {
@@ -6,6 +11,57 @@ function getUsers(request, response) {
     })
     .catch(error => {
       response.status(500).json({ error: 'Failed to retrieve users' });
+    });
+}
+
+function getMyUser(request, response) {
+  const userId = Number(request.auth?.user_id);
+  if (!Number.isFinite(userId) || userId <= 0) {
+    response.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  userModel.getSelf(userId)
+    .then((user) => {
+      if (!user) {
+        response.status(404).json({ error: 'User not found' });
+        return;
+      }
+      response.json({ user });
+    })
+    .catch(() => {
+      response.status(500).json({ error: 'Failed to retrieve account details' });
+    });
+}
+
+function updateMyUser(request, response) {
+  const userId = Number(request.auth?.user_id);
+  if (!Number.isFinite(userId) || userId <= 0) {
+    response.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const payload = {
+    username: request.body?.username,
+    email: request.body?.email,
+    full_name: request.body?.full_name,
+    password: request.body?.password
+  };
+
+  if (request.file?.filename) {
+    payload.profile_image_url = `${asBaseUrl(request)}/uploads/profile-images/${request.file.filename}`;
+  }
+
+  userModel.updateSelf(userId, payload)
+    .then((user) => {
+      response.json({ user });
+    })
+    .catch((error) => {
+      if (error?.code === 'ER_DUP_ENTRY') {
+        response.status(409).json({ error: 'Username or email already exists' });
+        return;
+      }
+      response.status(500).json({ error: 'Failed to update account details' });
     });
 }
 function getUser(request, response) {
@@ -61,4 +117,4 @@ function deleteUser(request, response) {
       response.status(500).json({ error: 'Failed to delete user' });
     });
 }
-export { getUsers, getUser, addUser, updateUser, deleteUser };
+export { getUsers, getUser, addUser, updateUser, deleteUser, getMyUser, updateMyUser };

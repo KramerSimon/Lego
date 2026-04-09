@@ -376,6 +376,48 @@ button[mat-stroked-button][disabled] {
   font-size: 0.92rem;
 }
 
+:host-context([data-theme='dark']) mat-divider {
+  border-top-color: var(--lego-table-border) !important;
+}
+
+:host-context([data-theme='dark']) .expand-btn {
+  background: var(--lego-btn-stroked-bg);
+  border-color: var(--lego-btn-stroked-border);
+  color: var(--lego-btn-stroked-fg);
+}
+
+:host-context([data-theme='dark']) button[mat-stroked-button],
+:host-context([data-theme='dark']) .mat-mdc-outlined-button {
+  background: var(--lego-btn-stroked-bg);
+  border-color: var(--lego-btn-stroked-border);
+  color: var(--lego-btn-stroked-fg);
+}
+
+:host-context([data-theme='dark']) button[mat-stroked-button][disabled],
+:host-context([data-theme='dark']) .mat-mdc-outlined-button[disabled] {
+  background: var(--lego-surface-muted);
+  border-color: var(--lego-card-border);
+  color: var(--lego-form-label);
+}
+
+:host-context([data-theme='dark']) .parts-list,
+:host-context([data-theme='dark']) .expanded-panel,
+:host-context([data-theme='dark']) .set-hero,
+:host-context([data-theme='dark']) .selected-set-preview,
+:host-context([data-theme='dark']) .preview-summary {
+  background: var(--lego-card-bg);
+  border-color: var(--lego-card-border);
+}
+
+:host-context([data-theme='dark']) .part-row {
+  border-bottom-color: var(--lego-table-border);
+}
+
+:host-context([data-theme='dark']) ::ng-deep .catalog-table .mat-mdc-cell,
+:host-context([data-theme='dark']) ::ng-deep .catalog-table .mat-mdc-header-cell {
+  border-bottom-color: var(--lego-table-border);
+}
+
 :host ::ng-deep .catalog-table .mat-mdc-header-cell {
   background: #eaf3f7;
   border-bottom: 1px solid #c9dbe3;
@@ -654,5 +696,19 @@ mat-paginator {
   .expanded-panel {
     margin: 0 0 10px;
     border-radius: 10px;
+  }
+
+  :host-context([data-theme='dark']) ::ng-deep .catalog-table .set-row {
+    border-color: var(--lego-card-border);
+    background: var(--lego-card-bg);
+    box-shadow: none;
+  }
+
+  :host-context([data-theme='dark']) ::ng-deep .catalog-table .set-row .mat-mdc-cell {
+    border-bottom-color: var(--lego-table-border);
+  }
+
+  :host-context([data-theme='dark']) ::ng-deep .catalog-table .set-row .mat-mdc-cell::before {
+    color: var(--lego-form-label);
   }
 }

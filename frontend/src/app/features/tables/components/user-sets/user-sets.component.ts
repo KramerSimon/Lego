@@ -15,14 +15,15 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import {
-  LegoApiService,
   PagedResult,
   SetPartRequirement,
   UserSetBreakdownPart,
   UserSetBreakdownResponse,
   UserSetPartSelection,
   UserSetWithPartsResult
-} from '../../../../core/services/lego-api.service';
+} from '../../../../core/services/api-types';
+import { UserSetsApiService } from '../../../../core/services/user-sets-api.service';
+import { SetsTableApiService, UserSetsTableApiService, UsersApiService } from '../../../../core/services/tables/table-services.service';
 import { forkJoin } from 'rxjs';
 import { UserSetConfirmDialogComponent } from './user-set-confirm-dialog.component';
 import { USER_SETS_CONFIG } from '../../config/table-definitions';
@@ -52,7 +53,10 @@ import { USER_SETS_CONFIG } from '../../config/table-definitions';
 })
 export class UserSetsComponent implements OnInit {
   readonly config = USER_SETS_CONFIG;
-  private readonly api = inject(LegoApiService);
+  private readonly userSetsApi = inject(UserSetsApiService);
+  private readonly userSetsTableApi = inject(UserSetsTableApiService);
+  private readonly usersApi = inject(UsersApiService);
+  private readonly setsApi = inject(SetsTableApiService);
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
@@ -208,7 +212,7 @@ export class UserSetsComponent implements OnInit {
     }
 
     this.breakdownLoading.set(true);
-    this.api.getUserSetBreakdown(userSetId).subscribe({
+    this.userSetsApi.getBreakdown(userSetId).subscribe({
       next: (response) => {
         this.breakdownLoading.set(false);
         this.breakdownMap.update((current) => ({
@@ -308,7 +312,7 @@ export class UserSetsComponent implements OnInit {
     const quantity = this.getEditableQuantity(kind, row);
     this.updatingRowKey.set(rowKey);
 
-    this.api.updateUserSetBreakdownPart(userSetId, kind, row.row_id, quantity).subscribe({
+    this.userSetsApi.updateBreakdownPart(userSetId, kind, row.row_id, quantity).subscribe({
       next: () => {
         this.updatingRowKey.set(null);
         this.breakdownMap.update((current) => {
@@ -352,7 +356,7 @@ export class UserSetsComponent implements OnInit {
     }
 
     this.deletingUserSetId.set(userSetId);
-    this.api.deleteRow('user_sets', userSetId).subscribe({
+    this.userSetsTableApi.deleteRow(userSetId).subscribe({
       next: () => {
         this.deletingUserSetId.set(null);
         if (this.expandedUserSetId() === userSetId) {
@@ -478,7 +482,7 @@ export class UserSetsComponent implements OnInit {
       }
 
       this.saving.set(true);
-      this.api.createUserSetWithParts({
+      this.userSetsApi.createWithParts({
       user_set: {
         user_id: userId,
         set_num: setNum,
@@ -505,7 +509,7 @@ export class UserSetsComponent implements OnInit {
   private loadOptions(): void {
     this.loadingOptions.set(true);
     forkJoin([
-      this.api.getRows('users', 1, 500)
+      this.usersApi.getRows(1, 500)
     ]).subscribe({
       next: ([usersResponse]) => {
       const userRows = this.unwrapRows(usersResponse);
@@ -533,7 +537,7 @@ export class UserSetsComponent implements OnInit {
     }
 
     this.loadingSetOptions.set(true);
-    this.api.getRows('sets', 1, 200, extraParams).subscribe({
+    this.setsApi.getRows(1, 200, extraParams).subscribe({
       next: (response) => {
         this.loadingSetOptions.set(false);
         const setRows = this.unwrapRows(response);
@@ -572,7 +576,7 @@ export class UserSetsComponent implements OnInit {
   private loadSetParts(setNum: string): void {
     this.loadingParts.set(true);
     this.summary.set(null);
-    this.api.getUserSetParts(setNum).subscribe({
+    this.userSetsApi.getSetParts(setNum).subscribe({
       next: (response) => {
         this.loadingParts.set(false);
         const parts = Array.isArray(response.parts) ? response.parts : [];
@@ -595,7 +599,7 @@ export class UserSetsComponent implements OnInit {
 
   private reloadCatalog(): void {
     this.loadingCatalog.set(true);
-    this.api.getRows('user_sets', this.page(), this.pageSize()).subscribe({
+    this.userSetsTableApi.getRows(this.page(), this.pageSize()).subscribe({
       next: (response) => {
         this.loadingCatalog.set(false);
         const resolvedRows = Array.isArray(response)

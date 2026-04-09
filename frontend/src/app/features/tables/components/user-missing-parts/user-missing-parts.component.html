@@ -1,1 +1,141 @@
-<lego-table-panel [config]="config"></lego-table-panel>
+<mat-card class="entry-card">
+	<mat-card-header>
+		<mat-card-title>Missing Parts Catalog</mat-card-title>
+		<mat-card-subtitle>Filter by user, set, and theme. Search by part name/number, set number, or theme.</mat-card-subtitle>
+	</mat-card-header>
+
+	<mat-card-content>
+		<form class="filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
+			<mat-form-field appearance="outline">
+				<mat-label>User</mat-label>
+				<mat-select formControlName="user_id">
+					<mat-option [value]="null">All users</mat-option>
+					<mat-option *ngFor="let user of users()" [value]="user.user_id">{{ user.label }}</mat-option>
+				</mat-select>
+			</mat-form-field>
+
+			<mat-form-field appearance="outline">
+				<mat-label>Set Number</mat-label>
+				<mat-select formControlName="set_num" panelClass="lego-select-panel" (openedChange)="handleSetPanelOpened($event)">
+					<mat-option [value]="''">All sets</mat-option>
+
+					<mat-option class="set-search-option" disabled>
+						<div class="search-input-wrap" (click)="$event.stopPropagation()">
+							<mat-icon>search</mat-icon>
+							<input
+								matInput
+								[value]="setSearchTerm()"
+								(input)="handleSetSearchInput($any($event.target).value)"
+								(click)="$event.stopPropagation()"
+								(keydown)="$event.stopPropagation()"
+								placeholder="Search set number or name"
+							/>
+						</div>
+					</mat-option>
+
+					<mat-option *ngIf="loadingSetOptions()" disabled>Loading sets...</mat-option>
+
+					<mat-option *ngFor="let set of sets()" [value]="set.set_num">
+						<div class="set-option">
+							<img *ngIf="asImageUrl(set.img_url) as setImg" [src]="setImg" alt="set" class="set-option-thumb" loading="lazy" />
+							<span>{{ set.label }}</span>
+						</div>
+					</mat-option>
+
+					<mat-option *ngIf="!loadingSetOptions() && sets().length === 0" disabled>No matching sets found</mat-option>
+					<mat-option *ngIf="!loadingSetOptions() && hasMoreSetOptions()" class="set-load-more-option" disabled>
+						<button mat-button type="button" (click)="loadMoreSetOptions($event)">Load more sets</button>
+					</mat-option>
+				</mat-select>
+			</mat-form-field>
+
+			<mat-form-field appearance="outline">
+				<mat-label>Theme</mat-label>
+				<mat-select formControlName="theme_id">
+					<mat-option [value]="null">All themes</mat-option>
+					<mat-option *ngFor="let theme of themes()" [value]="theme.id">{{ theme.name }}</mat-option>
+				</mat-select>
+			</mat-form-field>
+
+			<mat-form-field class="search-field" appearance="outline">
+				<mat-label>Search</mat-label>
+				<input matInput formControlName="search" placeholder="part name/number, set number, theme" />
+			</mat-form-field>
+
+			<div class="actions">
+				<button mat-raised-button color="primary" type="submit">
+					<mat-icon>search</mat-icon>
+					Apply
+				</button>
+				<button mat-stroked-button type="button" (click)="resetFilters()">Reset</button>
+			</div>
+		</form>
+
+		<div class="loader" *ngIf="loading()">
+			<mat-spinner diameter="34"></mat-spinner>
+		</div>
+
+		<div class="table-wrap" *ngIf="!loading()">
+			<table mat-table [dataSource]="rows()" class="mat-elevation-z2 missing-parts-table">
+				<ng-container matColumnDef="part_img_url">
+					<th mat-header-cell *matHeaderCellDef>Part</th>
+					<td mat-cell *matCellDef="let row">
+						<img *ngIf="asImageUrl(row['part_img_url']) as partImg" [src]="partImg" [alt]="row['part_num']" class="thumb" loading="lazy" />
+						<span *ngIf="!asImageUrl(row['part_img_url'])" class="thumb-empty">No image</span>
+					</td>
+				</ng-container>
+
+				<ng-container matColumnDef="part_num">
+					<th mat-header-cell *matHeaderCellDef>Part #</th>
+					<td mat-cell *matCellDef="let row">{{ row['part_num'] }}</td>
+				</ng-container>
+
+				<ng-container matColumnDef="part_name">
+					<th mat-header-cell *matHeaderCellDef>Part Name</th>
+					<td mat-cell *matCellDef="let row">{{ row['part_name'] || 'Unknown part' }}</td>
+				</ng-container>
+
+				<ng-container matColumnDef="quantity_missing">
+					<th mat-header-cell *matHeaderCellDef>Missing</th>
+					<td mat-cell *matCellDef="let row">{{ row['quantity_missing'] }}</td>
+				</ng-container>
+
+				<ng-container matColumnDef="color_name">
+					<th mat-header-cell *matHeaderCellDef>Color</th>
+					<td mat-cell *matCellDef="let row">{{ row['color_name'] || row['color_id'] }}</td>
+				</ng-container>
+
+				<ng-container matColumnDef="set">
+					<th mat-header-cell *matHeaderCellDef>Set</th>
+					<td mat-cell *matCellDef="let row">
+						<div class="set-cell">
+							<img *ngIf="asImageUrl(row['set_img_url']) as setImg" [src]="setImg" [alt]="row['set_num']" class="set-thumb" loading="lazy" />
+							<div>{{ setLabel(row) }}</div>
+						</div>
+					</td>
+				</ng-container>
+
+				<ng-container matColumnDef="theme_name">
+					<th mat-header-cell *matHeaderCellDef>Theme</th>
+					<td mat-cell *matCellDef="let row">{{ row['theme_name'] || '-' }}</td>
+				</ng-container>
+
+				<ng-container matColumnDef="user">
+					<th mat-header-cell *matHeaderCellDef>User</th>
+					<td mat-cell *matCellDef="let row">{{ userLabel(row) }}</td>
+				</ng-container>
+
+				<tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+				<tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+			</table>
+
+			<mat-paginator
+				[length]="total()"
+				[pageSize]="pageSize()"
+				[pageSizeOptions]="pageSizeOptions"
+				[pageIndex]="page() - 1"
+				(page)="handlePage($event)"
+			></mat-paginator>
+		</div>
+	</mat-card-content>
+</mat-card>

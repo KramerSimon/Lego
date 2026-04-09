@@ -26,17 +26,17 @@
 					(openedChange)="handleThemePanelOpened($event)"
 				>
 					<mat-option class="set-search-option" disabled>
-						<mat-form-field appearance="outline" class="set-search-field">
-							<mat-label>Search category</mat-label>
+						<div class="search-input-wrap" (click)="$event.stopPropagation()">
+							<mat-icon>search</mat-icon>
 							<input
 								matInput
 								[value]="themeSearchTerm()"
 								(input)="handleThemeSearchInput($any($event.target).value)"
 								(click)="$event.stopPropagation()"
 								(keydown)="$event.stopPropagation()"
-								placeholder="e.g. Friends"
+								placeholder="Search category"
 							/>
-						</mat-form-field>
+						</div>
 					</mat-option>
 
 					<mat-option [value]="null">All themes</mat-option>

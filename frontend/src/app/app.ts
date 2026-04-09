@@ -1,9 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { InventoriesComponent } from './features/tables/components/inventories/inventories.component';
 import { InventoryPartsComponent } from './features/tables/components/inventory-parts/inventory-parts.component';
 import { PartsComponent } from './features/tables/components/parts/parts.component';
@@ -22,6 +24,9 @@ import { UserMissingPartsComponent } from './features/tables/components/user-mis
 import { UserSetsComponent } from './features/tables/components/user-sets/user-sets.component';
 import { AuthFormComponent } from './features/auth/components/auth-form/auth-form.component';
 import { AuthService } from './core/services/auth.service';
+import { AuthUser } from './core/services/api-types';
+import { AccountSettingsDialogComponent } from './features/auth/components/account-settings-dialog/account-settings-dialog.component';
+import { environment } from '../environments/environment';
 
 @Component({
   selector: 'lego-root',
@@ -31,6 +36,8 @@ import { AuthService } from './core/services/auth.service';
     MatToolbarModule,
     MatIconModule,
     MatButtonModule,
+    MatMenuModule,
+    MatDialogModule,
     InventoriesComponent,
     InventoryPartsComponent,
     PartsComponent,
@@ -53,6 +60,72 @@ import { AuthService } from './core/services/auth.service';
   styleUrl: './app.scss'
 })
 export class App {
+  private static readonly THEME_KEY = 'lego_theme';
+
   protected readonly title = 'Lego Collection Manager';
   protected readonly auth = inject(AuthService);
+  private readonly dialog = inject(MatDialog);
+  protected readonly theme = signal<'light' | 'dark'>('light');
+
+  constructor() {
+    const savedTheme = this.readSavedTheme();
+    this.theme.set(savedTheme);
+    this.applyTheme(savedTheme);
+  }
+
+  protected toggleTheme(): void {
+    const nextTheme = this.theme() === 'dark' ? 'light' : 'dark';
+    this.theme.set(nextTheme);
+    this.applyTheme(nextTheme);
+    localStorage.setItem(App.THEME_KEY, nextTheme);
+  }
+
+  protected openAccountSettings(): void {
+    const currentUser = this.auth.user();
+    if (!currentUser) {
+      return;
+    }
+
+    const dialogRef = this.dialog.open(AccountSettingsDialogComponent, {
+      width: 'min(680px, 96vw)',
+      maxWidth: '96vw',
+      data: currentUser
+    });
+
+    dialogRef.afterClosed().subscribe((updatedUser: AuthUser | null | undefined) => {
+      if (!updatedUser) {
+        return;
+      }
+      this.auth.setCurrentUser(updatedUser);
+    });
+  }
+
+  protected profileImageUrl(user: AuthUser | null): string | null {
+    if (!user) {
+      return null;
+    }
+    const raw = String(user.profile_image_url ?? '').trim();
+    if (!raw) {
+      return null;
+    }
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      return raw;
+    }
+    if (raw.startsWith('/')) {
+      return `${environment.apiBaseUrl}${raw}`;
+    }
+    return raw;
+  }
+
+  private readSavedTheme(): 'light' | 'dark' {
+    const saved = String(localStorage.getItem(App.THEME_KEY) ?? '').toLowerCase();
+    if (saved === 'dark') {
+      return 'dark';
+    }
+    return 'light';
+  }
+
+  private applyTheme(theme: 'light' | 'dark'): void {
+    document.documentElement.setAttribute('data-theme', theme);
+  }
 }

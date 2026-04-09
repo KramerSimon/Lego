@@ -5,7 +5,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { PageEvent } from '@angular/material/paginator';
 import { TableConfig, TableField } from '../../../core/models/table-config';
-import { LegoApiService, PagedResult } from '../../../core/services/lego-api.service';
+import { PagedResult } from '../../../core/services/api-types';
+import { TableApiRegistryService } from '../../../core/services/tables/table-api-registry.service';
 import { TableFormComponent } from '../table-form/table-form.component';
 import { TableCatalogComponent } from '../table-catalog/table-catalog.component';
 import { SelectFieldState, SelectOption } from '../table-form/table-form.models';
@@ -25,7 +26,7 @@ import { SelectFieldState, SelectOption } from '../table-form/table-form.models'
 })
 export class TablePanelComponent implements OnInit {
   readonly config = input.required<TableConfig>();
-  private readonly api = inject(LegoApiService);
+  private readonly tableApiRegistry = inject(TableApiRegistryService);
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
 
@@ -53,7 +54,7 @@ export class TablePanelComponent implements OnInit {
 
   reload(): void {
     this.loading.set(true);
-    this.api.getRows(this.config().endpoint, this.page(), this.pageSize()).subscribe({
+    this.tableApiRegistry.get(this.config().endpoint).getRows(this.page(), this.pageSize()).subscribe({
       next: (response) => {
         if (Array.isArray(response)) {
           this.rows.set(response);
@@ -80,7 +81,7 @@ export class TablePanelComponent implements OnInit {
     }
 
     this.loading.set(true);
-    this.api.createRow(this.config().endpoint, this.form.getRawValue()).subscribe({
+    this.tableApiRegistry.get(this.config().endpoint).createRow(this.form.getRawValue()).subscribe({
       next: () => {
         this.form.reset();
         this.page.set(1);
@@ -224,7 +225,7 @@ export class TablePanelComponent implements OnInit {
       }
     }));
 
-    this.api.getRows(source.endpoint, page, pageSize, extraParams).subscribe({
+    this.tableApiRegistry.get(source.endpoint).getRows(page, pageSize, extraParams).subscribe({
         next: (response) => {
           const rows = Array.isArray(response) ? response : response.data;
           const total = Array.isArray(response) ? rows.length : (response.total ?? rows.length);
