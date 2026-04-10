@@ -7,16 +7,16 @@
 		<span class="spacer"></span>
 		<button class="theme-btn" mat-stroked-button type="button" (click)="toggleTheme()">
 			<mat-icon>{{ theme() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
-			{{ theme() === 'dark' ? 'Light' : 'Dark' }}
+			<span class="toolbar-btn-text">{{ theme() === 'dark' ? 'Light' : 'Dark' }}</span>
 		</button>
 		<ng-container *ngIf="auth.user() as user">
 			<button class="pickabrick-btn" mat-flat-button type="button" (click)="openPickABrick()">
 				<mat-icon>open_in_new</mat-icon>
-				Pick a Brick
+				<span class="toolbar-btn-text">Pick a Brick</span>
 			</button>
 			<button class="guide-btn" mat-stroked-button type="button" data-guide-id="open-guide" (click)="openGuide()">
 				<mat-icon>school</mat-icon>
-				Guide
+				<span class="toolbar-btn-text">Guide</span>
 			</button>
 			<button class="account-btn" mat-stroked-button type="button" [matMenuTriggerFor]="accountMenu">
 				<span class="avatar-chip" [class.has-image]="profileImageUrl(user)">

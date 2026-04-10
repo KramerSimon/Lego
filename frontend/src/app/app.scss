@@ -302,6 +302,10 @@
 		padding: 10px;
 	}
 
+	.toolbar-btn-text {
+		display: none;
+	}
+
 	.hero-toolbar {
 		border-radius: 12px;
 		padding: 10px;
@@ -324,7 +328,29 @@
 
 	.pickabrick-btn {
 		min-width: 0;
-		padding: 0 10px;
+		padding: 0 8px;
+	}
+
+	.theme-btn,
+	.guide-btn,
+	.pickabrick-btn {
+		width: 40px;
+		min-width: 40px;
+		padding: 0;
+	}
+
+	:host ::ng-deep .hero-toolbar .theme-btn .mdc-button__label,
+	:host ::ng-deep .hero-toolbar .guide-btn .mdc-button__label,
+	:host ::ng-deep .hero-toolbar .pickabrick-btn .mdc-button__label {
+		width: 100%;
+		justify-content: center;
+		gap: 0;
+	}
+
+	:host ::ng-deep .hero-toolbar .theme-btn .mat-icon,
+	:host ::ng-deep .hero-toolbar .guide-btn .mat-icon,
+	:host ::ng-deep .hero-toolbar .pickabrick-btn .mat-icon {
+		margin: 0;
 	}
 
 	.account-label {
