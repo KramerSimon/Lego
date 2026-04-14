@@ -1,4 +1,11 @@
 
+.entry-card {
+  border-radius: 14px;
+  border: 0;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--lego-accent) 8%, var(--lego-card-bg)) 0%, var(--lego-card-bg) 100%);
+}
+
 .filters-shell {
   display: grid;
   grid-template-columns: 1fr;
@@ -115,9 +122,9 @@
 }
 
 .missing-card {
-  border: 1px solid #d7e5eb;
+  border: 1px solid var(--lego-card-border);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--lego-card-bg);
   padding: 10px;
   margin-bottom: 8px;
 }
@@ -174,8 +181,8 @@
   height: 30px;
   object-fit: cover;
   border-radius: 6px;
-  border: 1px solid #d7e5eb;
-  background: #ffffff;
+  border: 1px solid var(--lego-card-border);
+  background: var(--lego-surface-muted);
 }
 
 .reset-btn {
@@ -225,8 +232,8 @@
   padding: 0 6px;
   margin-left: 6px;
   border-radius: 999px;
-  background: #0b7285;
-  color: #ffffff;
+  background: var(--lego-accent);
+  color: var(--lego-btn-primary-fg);
   font-size: 0.75rem;
   align-items: center;
   justify-content: center;
@@ -242,7 +249,7 @@ table.mat-mdc-table {
 }
 
 :host ::ng-deep .missing-parts-table .mat-mdc-row:hover {
-  background: rgba(13, 73, 89, 0.05);
+  background: var(--lego-table-row-hover);
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
 }
@@ -277,8 +284,8 @@ table.mat-mdc-table {
   height: 56px;
   object-fit: contain;
   border-radius: 8px;
-  border: 1px solid #d7e5eb;
-  background: #ffffff;
+  border: 1px solid var(--lego-card-border);
+  background: var(--lego-surface-muted);
 }
 
 .set-cell {
@@ -290,7 +297,7 @@ table.mat-mdc-table {
 .set-copy {
   line-height: 1.35;
   font-size: 0.9rem;
-  color: #5f7d89;
+  color: var(--lego-ink-soft);
 }
 
 .missing-badge {
@@ -299,39 +306,39 @@ table.mat-mdc-table {
   height: 28px;
   padding: 0 9px;
   border-radius: 999px;
-  background: #eceff1;
-  color: #536671;
+  background: color-mix(in srgb, var(--lego-form-label) 18%, var(--lego-card-bg));
+  color: var(--lego-form-ink);
   font-weight: 800;
   align-items: center;
   justify-content: center;
 }
 
 .missing-badge.badge-medium {
-  background: #ffe8cc;
-  color: #b35a00;
+  background: color-mix(in srgb, var(--lego-accent-2) 24%, var(--lego-card-bg));
+  color: #9a4b00;
 }
 
 .missing-badge.badge-high {
-  background: #ffd8d8;
-  color: #b23333;
+  background: color-mix(in srgb, #d14343 24%, var(--lego-card-bg));
+  color: #a32929;
 }
 
 .empty-state {
   margin-top: 12px;
-  border: 1px dashed #a9c0ca;
+  border: 1px dashed var(--lego-card-border);
   border-radius: 12px;
   padding: 16px;
-  background: #f8fcfe;
+  background: color-mix(in srgb, var(--lego-accent) 6%, var(--lego-card-bg));
 }
 
 .empty-state h3 {
   margin: 0 0 4px;
-  color: #1d5b6b;
+  color: var(--lego-form-ink);
 }
 
 .empty-state p {
   margin: 0;
-  color: #54717d;
+  color: var(--lego-ink-soft);
 }
 
 .thumb-empty {

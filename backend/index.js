@@ -125,6 +125,36 @@ async function ensureSchema() {
     `);
   }
 
+  const twoFactorEnabledRows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['two_factor_email_enabled']);
+  const hasTwoFactorEnabledColumn = Array.isArray(twoFactorEnabledRows) && twoFactorEnabledRows.length > 0;
+
+  if (!hasTwoFactorEnabledColumn) {
+    await database.query(`
+      ALTER TABLE users
+      ADD COLUMN two_factor_email_enabled TINYINT(1) NOT NULL DEFAULT 0 AFTER email_verification_expires_at
+    `);
+  }
+
+  const twoFactorCodeHashRows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['two_factor_code_hash']);
+  const hasTwoFactorCodeHashColumn = Array.isArray(twoFactorCodeHashRows) && twoFactorCodeHashRows.length > 0;
+
+  if (!hasTwoFactorCodeHashColumn) {
+    await database.query(`
+      ALTER TABLE users
+      ADD COLUMN two_factor_code_hash VARCHAR(64) NULL AFTER two_factor_email_enabled
+    `);
+  }
+
+  const twoFactorCodeExpiresRows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['two_factor_code_expires_at']);
+  const hasTwoFactorCodeExpiresColumn = Array.isArray(twoFactorCodeExpiresRows) && twoFactorCodeExpiresRows.length > 0;
+
+  if (!hasTwoFactorCodeExpiresColumn) {
+    await database.query(`
+      ALTER TABLE users
+      ADD COLUMN two_factor_code_expires_at DATETIME NULL AFTER two_factor_code_hash
+    `);
+  }
+
   await database.query('UPDATE users SET onboarding_guide_required = 0 WHERE onboarding_completed_at IS NOT NULL');
 
   await database.query('UPDATE users SET is_admin = 1 WHERE LOWER(username) = ?', ['simon']);

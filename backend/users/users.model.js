@@ -26,6 +26,21 @@ async function hasOnboardingCompletedAtColumn() {
   return Array.isArray(rows) && rows.length > 0;
 }
 
+async function hasTwoFactorEnabledColumn() {
+  const rows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['two_factor_email_enabled']);
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+async function hasTwoFactorCodeHashColumn() {
+  const rows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['two_factor_code_hash']);
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+async function hasTwoFactorCodeExpiresColumn() {
+  const rows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['two_factor_code_expires_at']);
+  return Array.isArray(rows) && rows.length > 0;
+}
+
 function sanitizeUser(row) {
   if (!row) {
     return null;
@@ -37,6 +52,7 @@ function sanitizeUser(row) {
     full_name: row.full_name,
     profile_image_url: row.profile_image_url ?? null,
     is_admin: Number(row.is_admin ?? 0) > 0,
+    two_factor_email_enabled: Number(row.two_factor_email_enabled ?? 0) > 0,
     onboarding_guide_required: Number(row.onboarding_guide_required ?? 0) > 0,
     onboarding_completed: Boolean(row.onboarding_completed_at),
     onboarding_completed_at: row.onboarding_completed_at ?? null
@@ -140,11 +156,13 @@ async function getSelf(userId) {
     const includeAdmin = await hasAdminColumn();
     const includeOnboardingRequired = await hasOnboardingRequiredColumn();
     const includeOnboardingCompletedAt = await hasOnboardingCompletedAtColumn();
+    const includeTwoFactorEnabled = await hasTwoFactorEnabledColumn();
     const profileSelect = includeProfileImage ? 'profile_image_url' : 'NULL AS profile_image_url';
     const adminSelect = includeAdmin ? 'is_admin' : '0 AS is_admin';
     const onboardingRequiredSelect = includeOnboardingRequired ? 'onboarding_guide_required' : '0 AS onboarding_guide_required';
     const onboardingCompletedAtSelect = includeOnboardingCompletedAt ? 'onboarding_completed_at' : 'NULL AS onboarding_completed_at';
-    const sql = `SELECT user_id, username, email, full_name, ${profileSelect}, ${adminSelect}, ${onboardingRequiredSelect}, ${onboardingCompletedAtSelect} FROM users WHERE user_id = ? LIMIT 1`;
+    const twoFactorEnabledSelect = includeTwoFactorEnabled ? 'two_factor_email_enabled' : '0 AS two_factor_email_enabled';
+    const sql = `SELECT user_id, username, email, full_name, ${profileSelect}, ${adminSelect}, ${twoFactorEnabledSelect}, ${onboardingRequiredSelect}, ${onboardingCompletedAtSelect} FROM users WHERE user_id = ? LIMIT 1`;
     const rows = await database.queryClose(sql, [userId]);
     return sanitizeUser(rows?.[0]);
   } catch (error) {
@@ -156,6 +174,9 @@ async function updateSelf(userId, payload = {}) {
   try {
     const includePassword = await hasPasswordColumn();
     const includeProfileImage = await hasProfileImageColumn();
+    const includeTwoFactorEnabled = await hasTwoFactorEnabledColumn();
+    const includeTwoFactorCodeHash = await hasTwoFactorCodeHashColumn();
+    const includeTwoFactorCodeExpires = await hasTwoFactorCodeExpiresColumn();
     const updates = [];
     const values = [];
 
@@ -191,6 +212,17 @@ async function updateSelf(userId, payload = {}) {
       if (plainPassword) {
         updates.push('password_hash = ?');
         values.push(await bcrypt.hash(plainPassword, 12));
+      }
+    }
+
+    if (includeTwoFactorEnabled && Object.prototype.hasOwnProperty.call(payload, 'two_factor_email_enabled')) {
+      const raw = String(payload.two_factor_email_enabled ?? '').trim().toLowerCase();
+      const enabled = raw === 'true' || raw === '1' || raw === 'yes' || raw === 'on';
+      updates.push('two_factor_email_enabled = ?');
+      values.push(enabled ? 1 : 0);
+      if (!enabled && includeTwoFactorCodeHash && includeTwoFactorCodeExpires) {
+        updates.push('two_factor_code_hash = NULL');
+        updates.push('two_factor_code_expires_at = NULL');
       }
     }
 

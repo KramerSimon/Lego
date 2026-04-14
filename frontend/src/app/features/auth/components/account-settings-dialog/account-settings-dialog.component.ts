@@ -3,6 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -21,6 +22,7 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
     ReactiveFormsModule,
     MatDialogModule,
     MatButtonModule,
+    MatCheckboxModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -47,6 +49,7 @@ export class AccountSettingsDialogComponent {
     username: this.fb.control(this.data.username ?? '', [Validators.required, Validators.minLength(2)]),
     email: this.fb.control(this.data.email ?? '', [Validators.required, Validators.email]),
     full_name: this.fb.control(this.data.full_name ?? '', [Validators.required, Validators.minLength(2)]),
+    two_factor_email_enabled: this.fb.control(Boolean(this.data.two_factor_email_enabled)),
     password: this.fb.control('', [Validators.minLength(6)])
   });
 
@@ -106,6 +109,7 @@ export class AccountSettingsDialogComponent {
     payload.append('username', String(raw.username ?? '').trim());
     payload.append('email', String(raw.email ?? '').trim());
     payload.append('full_name', String(raw.full_name ?? '').trim());
+    payload.append('two_factor_email_enabled', String(Boolean(raw.two_factor_email_enabled)));
 
     const password = String(raw.password ?? '').trim();
     if (password) {

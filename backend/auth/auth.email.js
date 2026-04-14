@@ -5,6 +5,7 @@ import path from 'path';
 const DEFAULT_SMTP_HOST = 'smtp-relay.brevo.com';
 const DEFAULT_SMTP_PORT = 587;
 const DEFAULT_SMTP_USER = 'a814c9001@smtp-brevo.com';
+const DEFAULT_FROM_ADDRESS = 'noreply@legobrickbuilder.it';
 const BREVO_API_ENDPOINT = 'https://api.brevo.com/v3/smtp/email';
 
 function resolveDefaultKeyFilePath() {
@@ -72,7 +73,7 @@ function getFromAddress() {
   if (fromAddress) {
     return fromAddress;
   }
-  return process.env.SMTP_USER || DEFAULT_SMTP_USER;
+  return DEFAULT_FROM_ADDRESS;
 }
 
 async function sendVerificationEmailViaBrevoApi({ to, username, verifyUrl }) {
@@ -119,9 +120,72 @@ async function sendVerificationEmailViaBrevoApi({ to, username, verifyUrl }) {
   return true;
 }
 
-export async function sendVerificationEmail({ to, username, verifyUrl }) {
+async function sendMailViaBrevoApi({ to, username, subject, textContent, htmlContent, logTag }) {
+  const apiKey = resolveBrevoApiKey();
+  if (!apiKey) {
+    return false;
+  }
+
+  const safeUsername = String(username ?? '').trim() || 'builder';
+  const from = getFromAddress();
+  const resolvedText = String(textContent ?? '').replaceAll('{username}', safeUsername);
+  const resolvedHtml = String(htmlContent ?? '').replaceAll('{username}', safeUsername);
+  const payload = {
+    sender: {
+      name: 'Lego Collection Manager',
+      email: from
+    },
+    to: [{ email: String(to).trim(), name: safeUsername }],
+    subject,
+    textContent: resolvedText,
+    htmlContent: resolvedHtml
+  };
+
+  const response = await fetch(BREVO_API_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'api-key': apiKey
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Brevo API send failed (${response.status}): ${body}`);
+  }
+
+  const data = await response.json().catch(() => ({}));
+  const messageId = String(data?.messageId ?? '').trim();
+  console.info(`[email] Brevo API ${logTag} email sent`, {
+    to: String(to),
+    messageId: messageId || null
+  });
+
+  return true;
+}
+
+async function sendMailViaSmtp({ to, username, subject, textContent, htmlContent, logTag }) {
+  const safeUsername = String(username ?? '').trim() || 'builder';
+  const transporter = nodemailer.createTransport(getSmtpConfig());
+  const result = await transporter.sendMail({
+    from: getFromAddress(),
+    to,
+    subject,
+    text: textContent.replaceAll('{username}', safeUsername),
+    html: htmlContent.replaceAll('{username}', safeUsername)
+  });
+  console.info(`[email] SMTP ${logTag} email sent`, {
+    to: String(to),
+    messageId: result?.messageId ?? null,
+    response: result?.response ?? null
+  });
+}
+
+async function sendTransactionalEmail({ to, username, subject, textContent, htmlContent, logTag }) {
   try {
-    const sentByApi = await sendVerificationEmailViaBrevoApi({ to, username, verifyUrl });
+    const sentByApi = await sendMailViaBrevoApi({ to, username, subject, textContent, htmlContent, logTag });
     if (sentByApi) {
       return;
     }
@@ -129,18 +193,28 @@ export async function sendVerificationEmail({ to, username, verifyUrl }) {
     console.error('[email] Brevo API send failed, falling back to SMTP:', error?.message || error);
   }
 
-  const safeUsername = String(username ?? '').trim() || 'builder';
-  const transporter = nodemailer.createTransport(getSmtpConfig());
-  const result = await transporter.sendMail({
-    from: getFromAddress(),
+  await sendMailViaSmtp({ to, username, subject, textContent, htmlContent, logTag });
+}
+
+export async function sendVerificationEmail({ to, username, verifyUrl }) {
+  await sendTransactionalEmail({
     to,
+    username,
     subject: 'Verify your LEGO account email',
-    text: `Hi ${safeUsername},\n\nPlease verify your email by opening this link:\n${verifyUrl}\n\nThis link expires in 24 hours.`,
-    html: `<p>Hi ${safeUsername},</p><p>Please verify your email by opening this link:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>This link expires in 24 hours.</p>`
+    textContent: 'Hi {username},\n\nPlease verify your email by opening this link:\n' + verifyUrl + '\n\nThis link expires in 24 hours.',
+    htmlContent: `<p>Hi {username},</p><p>Please verify your email by opening this link:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>This link expires in 24 hours.</p>`,
+    logTag: 'verification'
   });
-  console.info('[email] SMTP verification email sent', {
-    to: String(to),
-    messageId: result?.messageId ?? null,
-    response: result?.response ?? null
+}
+
+export async function sendTwoFactorCodeEmail({ to, username, code }) {
+  const safeCode = String(code ?? '').trim();
+  await sendTransactionalEmail({
+    to,
+    username,
+    subject: 'Your LEGO account verification code',
+    textContent: 'Hi {username},\n\nYour verification code is: ' + safeCode + '\n\nThe code expires in 10 minutes.',
+    htmlContent: `<p>Hi {username},</p><p>Your verification code is:</p><p style="font-size:20px;font-weight:bold;letter-spacing:2px;">${safeCode}</p><p>The code expires in 10 minutes.</p>`,
+    logTag: '2fa'
   });
 }

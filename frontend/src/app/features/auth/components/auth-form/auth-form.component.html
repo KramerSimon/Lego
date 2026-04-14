@@ -36,7 +36,7 @@
         </button>
       </div>
 
-      <form *ngIf="mode() === 'login'" [formGroup]="loginForm" (ngSubmit)="submit()" class="auth-form">
+      <form *ngIf="mode() === 'login' && !auth.pendingTwoFactorToken()" [formGroup]="loginForm" (ngSubmit)="submit()" class="auth-form">
         <mat-form-field appearance="outline">
           <mat-label>{{ 'Username or Email' | t }}</mat-label>
           <input matInput formControlName="identifier" placeholder="simon or simon@example.com" />
@@ -51,6 +51,28 @@
           <button mat-raised-button color="primary" type="submit" [disabled]="auth.authenticating()">
             <mat-icon>login</mat-icon>
             {{ 'Login' | t }}
+          </button>
+        </div>
+      </form>
+
+      <form *ngIf="mode() === 'login' && auth.pendingTwoFactorToken()" [formGroup]="twoFactorForm" (ngSubmit)="submit()" class="auth-form">
+        <p>{{ auth.twoFactorMessage() || ('Verification code sent to your email.' | t) }}</p>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'Verification Code' | t }}</mat-label>
+          <input matInput formControlName="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+        </mat-form-field>
+
+        <div class="auth-actions auth-form-span-2">
+          <button mat-raised-button color="primary" type="submit" [disabled]="auth.authenticating()">
+            <mat-icon>verified_user</mat-icon>
+            {{ 'Verify and Login' | t }}
+          </button>
+          <button mat-stroked-button type="button" (click)="resendTwoFactorCode()" [disabled]="auth.authenticating()">
+            <mat-icon>mail</mat-icon>
+            {{ 'Resend Code' | t }}
+          </button>
+          <button mat-button type="button" (click)="backToPasswordLogin()" [disabled]="auth.authenticating()">
+            {{ 'Back to Login' | t }}
           </button>
         </div>
       </form>

@@ -252,6 +252,20 @@ mat-paginator {
 	background: var(--lego-paginator-bg);
 }
 
+.mat-mdc-paginator,
+.mat-mdc-paginator-outer-container,
+.mat-mdc-paginator-container {
+	background: var(--lego-paginator-bg) !important;
+	color: var(--lego-form-ink) !important;
+}
+
+.mat-mdc-paginator .mat-mdc-select-value,
+.mat-mdc-paginator .mat-mdc-select-arrow,
+.mat-mdc-paginator .mat-mdc-paginator-range-label,
+.mat-mdc-paginator .mat-mdc-icon-button {
+	color: var(--lego-form-ink) !important;
+}
+
 .mat-mdc-form-field .mdc-text-field--outlined {
 	background: var(--lego-card-bg);
 	border-radius: 10px;
@@ -656,6 +670,15 @@ mat-paginator {
 	background: var(--lego-paginator-bg) !important;
 	color: var(--lego-form-ink) !important;
 	border-color: var(--lego-card-border) !important;
+}
+
+:root[data-theme='dark'] .mat-mdc-paginator-outer-container,
+:root[data-theme='dark'] .mat-mdc-paginator .mat-mdc-select-value,
+:root[data-theme='dark'] .mat-mdc-paginator .mat-mdc-select-arrow,
+:root[data-theme='dark'] .mat-mdc-paginator .mat-mdc-paginator-range-label,
+:root[data-theme='dark'] .mat-mdc-paginator .mat-mdc-icon-button {
+	background: var(--lego-paginator-bg) !important;
+	color: var(--lego-form-ink) !important;
 }
 
 :root[data-theme='dark'] .mat-mdc-button,

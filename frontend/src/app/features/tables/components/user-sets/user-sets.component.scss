@@ -13,16 +13,14 @@
 }
 
 .entry-card {
-  border-radius: 18px;
-  background: #ffffff;
-  border: 1px solid #d7e5eb;
-  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  background: var(--lego-card-bg);
+  border: 0;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
 }
 
 .focus-card {
-  border: 0;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
-  background: linear-gradient(180deg, #f7fcfe 0%, #ffffff 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--lego-accent) 8%, var(--lego-card-bg)) 0%, var(--lego-card-bg) 100%);
 }
 
 :host ::ng-deep .focus-card .mat-mdc-card-header {
@@ -50,19 +48,19 @@
 }
 
 .builder-card {
-  background: linear-gradient(180deg, #fbfeff 0%, #ffffff 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--lego-accent) 4%, var(--lego-card-bg)) 0%, var(--lego-card-bg) 100%);
 }
 
 .catalog-card {
-  border-color: #cfe0e8;
+  border-color: var(--lego-card-border);
 }
 
 mat-card-title {
-  color: #0b7285;
+  color: var(--lego-accent);
 }
 
 mat-card-subtitle {
-  color: #4f6a75;
+  color: var(--lego-card-subtitle);
 }
 
 .entry-form {
@@ -79,13 +77,13 @@ mat-card-subtitle {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 800;
-  color: #2b6476;
+  color: var(--lego-form-label);
 }
 
 .mobile-step-toggle {
   grid-column: 1 / -1;
-  border: 1px solid #cfe0e8;
-  background: #f6fbfd;
+  border: 1px solid var(--lego-card-border);
+  background: color-mix(in srgb, var(--lego-accent) 6%, var(--lego-card-bg));
   border-radius: 10px;
   min-height: 42px;
   display: inline-flex;
@@ -94,7 +92,7 @@ mat-card-subtitle {
   padding: 0 10px;
   font: inherit;
   font-weight: 700;
-  color: #25596a;
+  color: var(--lego-form-ink);
 }
 
 .set-field {
@@ -247,7 +245,7 @@ mat-card-subtitle {
 .quick-actions-label {
   font-size: 0.82rem;
   font-weight: 800;
-  color: #2a5e70;
+  color: var(--lego-form-label);
   margin-right: 2px;
 }
 
@@ -275,7 +273,7 @@ mat-card-subtitle {
 
 .parts-list {
   margin-top: 10px;
-  border: 1px solid #d7e5eb;
+  border: 1px solid var(--lego-card-border);
   border-radius: 12px;
   max-height: 360px;
   overflow: auto;
@@ -287,7 +285,7 @@ mat-card-subtitle {
   gap: 8px;
   align-items: center;
   padding: 8px 10px;
-  border-bottom: 1px solid #edf4f7;
+  border-bottom: 1px solid var(--lego-table-border);
 }
 
 .part-row:last-child {
@@ -296,11 +294,11 @@ mat-card-subtitle {
 
 .part-title {
   font-weight: 600;
-  color: #23434f;
+  color: var(--lego-form-ink);
 }
 
 .part-sub {
-  color: #54717d;
+  color: var(--lego-ink-soft);
   font-size: 0.9rem;
 }
 
@@ -309,8 +307,8 @@ mat-card-subtitle {
   height: 52px;
   object-fit: cover;
   border-radius: 8px;
-  border: 1px solid #d7e5eb;
-  background: #ffffff;
+  border: 1px solid var(--lego-card-border);
+  background: var(--lego-surface-muted);
 }
 
 .part-thumb-empty {
@@ -318,7 +316,7 @@ mat-card-subtitle {
   align-items: center;
   justify-content: center;
   font-size: 0.72rem;
-  color: #6b8792;
+  color: var(--lego-form-label);
 }
 
 .qty-field {
@@ -327,17 +325,17 @@ mat-card-subtitle {
 
 .missing-cell {
   font-size: 0.9rem;
-  color: #476672;
+  color: var(--lego-ink-soft);
   font-weight: 600;
 }
 
 .preview-summary {
   margin-top: 10px;
   padding: 10px 12px;
-  border: 1px solid #d7e5eb;
+  border: 1px solid var(--lego-card-border);
   border-radius: 10px;
-  background: #f7fbfc;
-  color: #274955;
+  background: var(--lego-surface-muted);
+  color: var(--lego-form-ink);
 }
 
 .completion-delight {
@@ -391,15 +389,15 @@ button[mat-stroked-button][disabled] {
 
 .summary {
   margin-top: 10px;
-  color: #0b7285;
+  color: var(--lego-accent);
   font-weight: 600;
 }
 
 .empty-state {
-  border: 1px dashed #a9c0ca;
+  border: 1px dashed var(--lego-card-border);
   border-radius: 12px;
   padding: 16px;
-  background: #f8fcfe;
+  background: color-mix(in srgb, var(--lego-accent) 6%, var(--lego-card-bg));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -408,16 +406,16 @@ button[mat-stroked-button][disabled] {
 
 .empty-state p {
   margin: 0;
-  color: #355866;
+  color: var(--lego-form-ink);
   font-weight: 600;
 }
 
 .table-wrap {
   width: 100%;
   overflow-x: auto;
-  border: 1px solid #d7e5eb;
+  border: 1px solid var(--lego-card-border);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--lego-card-bg);
 }
 
 .catalog-table {
@@ -466,7 +464,7 @@ button[mat-stroked-button][disabled] {
 }
 
 .set-row:hover {
-  background: rgba(13, 73, 89, 0.06);
+  background: var(--lego-table-row-hover);
 }
 
 .catalog-actions {
@@ -533,9 +531,9 @@ button[mat-stroked-button][disabled] {
 .expanded-panel {
   margin: 0;
   padding: 10px;
-  border: 1px solid #cfe0e8;
+  border: 1px solid var(--lego-card-border);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--lego-card-bg);
 }
 
 .set-hero {
@@ -543,9 +541,9 @@ button[mat-stroked-button][disabled] {
   justify-content: center;
   align-items: center;
   padding: 6px;
-  border: 1px solid #d7e5eb;
+  border: 1px solid var(--lego-card-border);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--lego-card-bg);
   margin: 0 0 8px;
 }
 
@@ -560,8 +558,8 @@ button[mat-stroked-button][disabled] {
   width: 38px;
   height: 38px;
   object-fit: contain;
-  background: #ffffff;
-  border: 1px solid #d7e5eb;
+  background: var(--lego-surface-muted);
+  border: 1px solid var(--lego-card-border);
   border-radius: 8px;
   display: block;
 }
@@ -582,7 +580,7 @@ button[mat-stroked-button][disabled] {
 }
 
 .muted {
-  color: #607884;
+  color: var(--lego-ink-soft);
   font-size: 0.92rem;
 }
 
@@ -648,35 +646,35 @@ button[mat-stroked-button][disabled] {
 }
 
 :host ::ng-deep .catalog-table .mat-mdc-header-cell {
-  background: #eaf3f7;
-  border-bottom: 1px solid #c9dbe3;
-  color: #1b3b47;
+  background: var(--lego-table-head-bg);
+  border-bottom: 1px solid var(--lego-border-strong);
+  color: var(--lego-table-head-ink);
   font-weight: 700;
 }
 
 :host ::ng-deep .catalog-table .mat-mdc-cell {
-  color: #102c38;
-  border-bottom: 1px solid #dce9ef;
+  color: var(--lego-form-ink);
+  border-bottom: 1px solid var(--lego-table-border);
   background: transparent;
 }
 
 :host ::ng-deep .catalog-table .mat-mdc-header-row {
-  background: #eaf3f7;
+  background: var(--lego-table-head-bg);
 }
 
 :host ::ng-deep .catalog-table .mat-mdc-row {
-  background: #ffffff;
+  background: var(--lego-card-bg);
 }
 
 :host ::ng-deep .catalog-table .mat-mdc-row:nth-child(even) {
-  background: #f8fbfd;
+  background: var(--lego-table-row-alt);
 }
 
 mat-paginator {
   margin-top: 10px;
   border-radius: 12px;
-  border: 1px solid #d7e5eb;
-  background: #fbfeff;
+  border: 1px solid var(--lego-card-border);
+  background: var(--lego-paginator-bg);
 }
 
 @media (max-width: 800px) {
@@ -694,11 +692,11 @@ mat-paginator {
 
   .part-row {
     grid-template-columns: 1fr;
-    border: 1px solid #dce9ef;
+    border: 1px solid var(--lego-table-border);
     border-radius: 10px;
     margin: 8px;
     padding: 10px;
-    background: #ffffff;
+    background: var(--lego-card-bg);
   }
 
   .part-row-edit {
@@ -726,9 +724,9 @@ mat-paginator {
     bottom: 6px;
     z-index: 8;
     padding: 8px;
-    border: 1px solid #cfe0e8;
+    border: 1px solid var(--lego-card-border);
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.98);
+    background: color-mix(in srgb, var(--lego-card-bg) 92%, transparent);
     backdrop-filter: blur(4px);
   }
 

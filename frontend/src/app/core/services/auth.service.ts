@@ -9,7 +9,12 @@ import {
   AuthRegisterResponse,
   AuthResendVerificationPayload,
   AuthResendVerificationResponse,
+  AuthResendTwoFactorPayload,
+  AuthResendTwoFactorResponse,
   AuthUser
+  ,
+  AuthVerifyTwoFactorPayload,
+  AuthVerifyTwoFactorResponse
 } from './api-types';
 import { ApiHttpService } from './api-http.service';
 
@@ -26,6 +31,9 @@ export class AuthService {
   readonly authError = signal<string | null>(null);
   readonly pendingVerificationEmail = signal<string | null>(null);
   readonly verificationMessage = signal<string | null>(null);
+  readonly pendingTwoFactorToken = signal<string | null>(null);
+  readonly pendingTwoFactorIdentifier = signal<string | null>(null);
+  readonly twoFactorMessage = signal<string | null>(null);
 
   constructor() {
     const savedToken = localStorage.getItem(TOKEN_KEY);
@@ -54,10 +62,25 @@ export class AuthService {
     this.authenticating.set(true);
     this.authError.set(null);
     this.verificationMessage.set(null);
+    this.twoFactorMessage.set(null);
     return this.loginRequest(identifier, password).pipe(
       tap((response) => {
+        if (response.requires_two_factor && response.two_factor_token) {
+          this.pendingTwoFactorToken.set(response.two_factor_token);
+          this.pendingTwoFactorIdentifier.set(identifier);
+          this.twoFactorMessage.set(response.message ?? 'Verification code sent to your email.');
+          this.authenticating.set(false);
+          return;
+        }
+
+        if (!response.token || !response.user) {
+          throw new Error('Authentication failed');
+        }
+
         this.persistAuth(response.token, response.user);
         this.pendingVerificationEmail.set(null);
+        this.pendingTwoFactorToken.set(null);
+        this.pendingTwoFactorIdentifier.set(null);
         this.authenticating.set(false);
       }),
       map(() => true),
@@ -86,6 +109,8 @@ export class AuthService {
       tap((response) => {
         this.pendingVerificationEmail.set(response.email);
         this.verificationMessage.set(response.message);
+        this.pendingTwoFactorToken.set(null);
+        this.pendingTwoFactorIdentifier.set(null);
         this.authenticating.set(false);
       }),
       map(() => true),
@@ -115,6 +140,60 @@ export class AuthService {
         return of(false);
       })
     );
+  }
+
+  verifyTwoFactor(code: string) {
+    const twoFactorToken = this.pendingTwoFactorToken();
+    if (!twoFactorToken) {
+      return of(false);
+    }
+
+    this.authenticating.set(true);
+    this.authError.set(null);
+    return this.verifyTwoFactorRequest({ two_factor_token: twoFactorToken, code }).pipe(
+      tap((response) => {
+        this.persistAuth(response.token, response.user);
+        this.pendingTwoFactorToken.set(null);
+        this.pendingTwoFactorIdentifier.set(null);
+        this.twoFactorMessage.set(null);
+        this.pendingVerificationEmail.set(null);
+        this.authenticating.set(false);
+      }),
+      map(() => true),
+      catchError((error: unknown) => {
+        this.authenticating.set(false);
+        this.authError.set(this.extractApiError(error));
+        return of(false);
+      })
+    );
+  }
+
+  resendTwoFactor() {
+    const twoFactorToken = this.pendingTwoFactorToken();
+    if (!twoFactorToken) {
+      return of(false);
+    }
+
+    this.authenticating.set(true);
+    this.authError.set(null);
+    return this.resendTwoFactorRequest({ two_factor_token: twoFactorToken }).pipe(
+      tap((response) => {
+        this.twoFactorMessage.set(response.message);
+        this.authenticating.set(false);
+      }),
+      map(() => true),
+      catchError((error: unknown) => {
+        this.authenticating.set(false);
+        this.authError.set(this.extractApiError(error));
+        return of(false);
+      })
+    );
+  }
+
+  cancelTwoFactor(): void {
+    this.pendingTwoFactorToken.set(null);
+    this.pendingTwoFactorIdentifier.set(null);
+    this.twoFactorMessage.set(null);
   }
 
   refreshMyAccount() {
@@ -163,6 +242,9 @@ export class AuthService {
     this.authError.set(null);
     this.pendingVerificationEmail.set(null);
     this.verificationMessage.set(null);
+    this.pendingTwoFactorToken.set(null);
+    this.pendingTwoFactorIdentifier.set(null);
+    this.twoFactorMessage.set(null);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   }
@@ -187,6 +269,14 @@ export class AuthService {
 
   private resendVerificationRequest(payload: AuthResendVerificationPayload) {
     return this.apiHttp.post<AuthResendVerificationResponse>('auth/resend-verification', payload);
+  }
+
+  private verifyTwoFactorRequest(payload: AuthVerifyTwoFactorPayload) {
+    return this.apiHttp.post<AuthVerifyTwoFactorResponse>('auth/verify-2fa', payload);
+  }
+
+  private resendTwoFactorRequest(payload: AuthResendTwoFactorPayload) {
+    return this.apiHttp.post<AuthResendTwoFactorResponse>('auth/resend-2fa', payload);
   }
 
   private completeOnboardingGuideRequest() {

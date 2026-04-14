@@ -2,10 +2,12 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import database from '../database.js';
-import { sendVerificationEmail } from './auth.email.js';
+import { sendTwoFactorCodeEmail, sendVerificationEmail } from './auth.email.js';
 
 const TOKEN_TTL = '12h';
 const EMAIL_VERIFICATION_TTL_HOURS = 24;
+const TWO_FACTOR_CODE_TTL_MINUTES = 10;
+const TWO_FACTOR_CHALLENGE_TTL = '10m';
 
 function getJwtSecret() {
   return process.env.AUTH_JWT_SECRET || 'lego-dev-secret-change-me';
@@ -20,10 +22,19 @@ function sanitizeUser(row) {
     profile_image_url: row.profile_image_url ?? null,
     is_admin: Number(row.is_admin ?? 0) > 0,
     email_verified: Number(row.email_verified ?? 0) > 0,
+    two_factor_email_enabled: Number(row.two_factor_email_enabled ?? 0) > 0,
     onboarding_guide_required: Number(row.onboarding_guide_required ?? 0) > 0,
     onboarding_completed: Boolean(row.onboarding_completed_at),
     onboarding_completed_at: row.onboarding_completed_at ?? null
   };
+}
+
+function createTwoFactorCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function hashTwoFactorCode(code) {
+  return crypto.createHash('sha256').update(`2fa:${String(code)}`).digest('hex');
 }
 
 function createVerificationToken() {
@@ -79,6 +90,21 @@ async function hasEmailVerificationExpiresColumn() {
   return Array.isArray(rows) && rows.length > 0;
 }
 
+async function hasTwoFactorEnabledColumn() {
+  const rows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['two_factor_email_enabled']);
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+async function hasTwoFactorCodeHashColumn() {
+  const rows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['two_factor_code_hash']);
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+async function hasTwoFactorCodeExpiresColumn() {
+  const rows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['two_factor_code_expires_at']);
+  return Array.isArray(rows) && rows.length > 0;
+}
+
 async function login(identifier, password) {
   const normalizedIdentifier = String(identifier ?? '').trim();
   const rawPassword = String(password ?? '');
@@ -93,6 +119,9 @@ async function login(identifier, password) {
   const onboardingRequiredColumnExists = await hasOnboardingGuideRequiredColumn();
   const onboardingCompletedAtColumnExists = await hasOnboardingCompletedAtColumn();
   const emailVerifiedColumnExists = await hasEmailVerifiedColumn();
+  const twoFactorEnabledColumnExists = await hasTwoFactorEnabledColumn();
+  const twoFactorCodeHashColumnExists = await hasTwoFactorCodeHashColumn();
+  const twoFactorCodeExpiresColumnExists = await hasTwoFactorCodeExpiresColumn();
   if (!passwordColumnExists) {
     throw new Error('password_hash column is missing in users table');
   }
@@ -106,8 +135,9 @@ async function login(identifier, password) {
     ? 'onboarding_completed_at,'
     : 'NULL AS onboarding_completed_at,';
   const emailVerifiedSelect = emailVerifiedColumnExists ? 'email_verified,' : '1 AS email_verified,';
+  const twoFactorEnabledSelect = twoFactorEnabledColumnExists ? 'two_factor_email_enabled,' : '0 AS two_factor_email_enabled,';
   const sql = `
-    SELECT user_id, username, email, full_name, ${profileSelect} ${adminSelect} ${emailVerifiedSelect} ${onboardingRequiredSelect} ${onboardingCompletedAtSelect} password_hash
+    SELECT user_id, username, email, full_name, ${profileSelect} ${adminSelect} ${emailVerifiedSelect} ${twoFactorEnabledSelect} ${onboardingRequiredSelect} ${onboardingCompletedAtSelect} password_hash
     FROM users
     WHERE username = ? OR email = ?
     LIMIT 1
@@ -128,6 +158,47 @@ async function login(identifier, password) {
     throw new Error('Email not verified. Please verify your email before logging in.');
   }
 
+  const twoFactorEnabled = Number(user.two_factor_email_enabled ?? 0) > 0;
+  if (twoFactorEnabled) {
+    if (!twoFactorCodeHashColumnExists || !twoFactorCodeExpiresColumnExists) {
+      throw new Error('Two-factor authentication columns are missing in users table');
+    }
+
+    const code = createTwoFactorCode();
+    const codeHash = hashTwoFactorCode(code);
+    const codeExpiresAt = new Date(Date.now() + TWO_FACTOR_CODE_TTL_MINUTES * 60 * 1000);
+    await database.query(
+      'UPDATE users SET two_factor_code_hash = ?, two_factor_code_expires_at = ? WHERE user_id = ? LIMIT 1',
+      [codeHash, codeExpiresAt, user.user_id]
+    );
+
+    try {
+      await sendTwoFactorCodeEmail({
+        to: user.email,
+        username: user.username,
+        code
+      });
+    } catch (error) {
+      const reason = String(error?.message ?? '').trim();
+      throw new Error(`Failed to send 2FA code. ${reason || 'Please try again.'}`);
+    }
+
+    const twoFactorToken = jwt.sign(
+      {
+        user_id: Number(user.user_id),
+        purpose: '2fa'
+      },
+      getJwtSecret(),
+      { expiresIn: TWO_FACTOR_CHALLENGE_TTL }
+    );
+
+    return {
+      requires_two_factor: true,
+      two_factor_token: twoFactorToken,
+      message: 'Verification code sent to your email.'
+    };
+  }
+
   const safeUser = sanitizeUser(user);
   const token = jwt.sign(
     {
@@ -143,6 +214,139 @@ async function login(identifier, password) {
     token,
     user: safeUser
   };
+}
+
+async function verifyTwoFactor(twoFactorToken, codeInput) {
+  const token = String(twoFactorToken ?? '').trim();
+  const code = String(codeInput ?? '').trim();
+  if (!token || !code) {
+    throw new Error('Two-factor token and code are required');
+  }
+
+  const decoded = jwt.verify(token, getJwtSecret());
+  if (String(decoded?.purpose ?? '') !== '2fa') {
+    throw new Error('Invalid two-factor token');
+  }
+
+  const profileImageColumnExists = await hasProfileImageColumn();
+  const adminColumnExists = await hasAdminColumn();
+  const emailVerifiedColumnExists = await hasEmailVerifiedColumn();
+  const onboardingRequiredColumnExists = await hasOnboardingGuideRequiredColumn();
+  const onboardingCompletedAtColumnExists = await hasOnboardingCompletedAtColumn();
+  const twoFactorEnabledColumnExists = await hasTwoFactorEnabledColumn();
+  const twoFactorCodeHashColumnExists = await hasTwoFactorCodeHashColumn();
+  const twoFactorCodeExpiresColumnExists = await hasTwoFactorCodeExpiresColumn();
+
+  if (!twoFactorEnabledColumnExists || !twoFactorCodeHashColumnExists || !twoFactorCodeExpiresColumnExists) {
+    throw new Error('Two-factor authentication columns are missing in users table');
+  }
+
+  const profileSelect = profileImageColumnExists ? 'profile_image_url,' : '';
+  const adminSelect = adminColumnExists ? 'is_admin,' : '0 AS is_admin,';
+  const emailVerifiedSelect = emailVerifiedColumnExists ? 'email_verified,' : '1 AS email_verified,';
+  const twoFactorEnabledSelect = twoFactorEnabledColumnExists ? 'two_factor_email_enabled,' : '0 AS two_factor_email_enabled,';
+  const onboardingRequiredSelect = onboardingRequiredColumnExists ? 'onboarding_guide_required,' : '0 AS onboarding_guide_required,';
+  const onboardingCompletedAtSelect = onboardingCompletedAtColumnExists ? 'onboarding_completed_at,' : 'NULL AS onboarding_completed_at,';
+
+  const rows = await database.query(
+    `SELECT user_id, username, email, full_name, ${profileSelect} ${adminSelect} ${emailVerifiedSelect} ${twoFactorEnabledSelect} ${onboardingRequiredSelect} ${onboardingCompletedAtSelect} two_factor_code_hash, two_factor_code_expires_at
+     FROM users WHERE user_id = ? LIMIT 1`,
+    [decoded.user_id]
+  );
+  const user = rows?.[0];
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  if (Number(user.email_verified ?? 0) <= 0) {
+    throw new Error('Email not verified. Please verify your email before logging in.');
+  }
+
+  if (Number(user.two_factor_email_enabled ?? 0) <= 0) {
+    throw new Error('Two-factor authentication is not enabled for this account');
+  }
+
+  const expiresAt = user.two_factor_code_expires_at ? new Date(user.two_factor_code_expires_at).getTime() : 0;
+  if (!user.two_factor_code_hash || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+    throw new Error('Two-factor code is invalid or expired');
+  }
+
+  const incomingHash = hashTwoFactorCode(code);
+  if (incomingHash !== String(user.two_factor_code_hash)) {
+    throw new Error('Two-factor code is invalid or expired');
+  }
+
+  await database.query(
+    'UPDATE users SET two_factor_code_hash = NULL, two_factor_code_expires_at = NULL WHERE user_id = ? LIMIT 1',
+    [user.user_id]
+  );
+
+  const safeUser = sanitizeUser(user);
+  const tokenOut = jwt.sign(
+    {
+      user_id: safeUser.user_id,
+      username: safeUser.username,
+      is_admin: safeUser.is_admin
+    },
+    getJwtSecret(),
+    { expiresIn: TOKEN_TTL }
+  );
+
+  return {
+    token: tokenOut,
+    user: safeUser
+  };
+}
+
+async function resendTwoFactor(twoFactorToken) {
+  const token = String(twoFactorToken ?? '').trim();
+  if (!token) {
+    throw new Error('Two-factor token is required');
+  }
+
+  const decoded = jwt.verify(token, getJwtSecret());
+  if (String(decoded?.purpose ?? '') !== '2fa') {
+    throw new Error('Invalid two-factor token');
+  }
+
+  const rows = await database.query(
+    'SELECT user_id, username, email, email_verified, two_factor_email_enabled FROM users WHERE user_id = ? LIMIT 1',
+    [decoded.user_id]
+  );
+  const user = rows?.[0];
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  if (Number(user.email_verified ?? 0) <= 0) {
+    throw new Error('Email not verified. Please verify your email before logging in.');
+  }
+
+  if (Number(user.two_factor_email_enabled ?? 0) <= 0) {
+    throw new Error('Two-factor authentication is not enabled for this account');
+  }
+
+  const code = createTwoFactorCode();
+  const codeHash = hashTwoFactorCode(code);
+  const codeExpiresAt = new Date(Date.now() + TWO_FACTOR_CODE_TTL_MINUTES * 60 * 1000);
+  await database.query(
+    'UPDATE users SET two_factor_code_hash = ?, two_factor_code_expires_at = ? WHERE user_id = ? LIMIT 1',
+    [codeHash, codeExpiresAt, user.user_id]
+  );
+
+  try {
+    await sendTwoFactorCodeEmail({
+      to: user.email,
+      username: user.username,
+      code
+    });
+  } catch (error) {
+    const reason = String(error?.message ?? '').trim();
+    throw new Error(`Failed to send 2FA code. ${reason || 'Please try again.'}`);
+  }
+
+  return { sent: true, message: 'Verification code sent to your email.' };
 }
 
 async function register(payload = {}) {
@@ -311,12 +515,14 @@ async function getMe(token) {
   const emailVerifiedColumnExists = await hasEmailVerifiedColumn();
   const onboardingRequiredColumnExists = await hasOnboardingGuideRequiredColumn();
   const onboardingCompletedAtColumnExists = await hasOnboardingCompletedAtColumn();
+  const twoFactorEnabledColumnExists = await hasTwoFactorEnabledColumn();
   const profileSelect = profileImageColumnExists ? 'profile_image_url' : 'NULL AS profile_image_url';
   const adminSelect = adminColumnExists ? 'is_admin' : '0 AS is_admin';
   const emailVerifiedSelect = emailVerifiedColumnExists ? 'email_verified' : '1 AS email_verified';
+  const twoFactorEnabledSelect = twoFactorEnabledColumnExists ? 'two_factor_email_enabled' : '0 AS two_factor_email_enabled';
   const onboardingRequiredSelect = onboardingRequiredColumnExists ? 'onboarding_guide_required' : '0 AS onboarding_guide_required';
   const onboardingCompletedAtSelect = onboardingCompletedAtColumnExists ? 'onboarding_completed_at' : 'NULL AS onboarding_completed_at';
-  const sql = `SELECT user_id, username, email, full_name, ${profileSelect}, ${adminSelect}, ${emailVerifiedSelect}, ${onboardingRequiredSelect}, ${onboardingCompletedAtSelect} FROM users WHERE user_id = ? LIMIT 1`;
+  const sql = `SELECT user_id, username, email, full_name, ${profileSelect}, ${adminSelect}, ${emailVerifiedSelect}, ${twoFactorEnabledSelect}, ${onboardingRequiredSelect}, ${onboardingCompletedAtSelect} FROM users WHERE user_id = ? LIMIT 1`;
   const rows = await database.query(sql, [decoded.user_id]);
   const user = rows?.[0];
   if (!user) {
@@ -342,4 +548,4 @@ async function completeOnboarding(token) {
   return getMe(token);
 }
 
-export default { login, register, getMe, completeOnboarding, verifyEmailToken, resendVerificationEmail };
+export default { login, register, getMe, completeOnboarding, verifyEmailToken, resendVerificationEmail, verifyTwoFactor, resendTwoFactor };

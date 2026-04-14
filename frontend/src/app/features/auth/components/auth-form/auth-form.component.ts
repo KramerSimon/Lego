@@ -37,6 +37,10 @@ export class AuthFormComponent {
     password: this.fb.control('', [Validators.required])
   });
 
+  readonly twoFactorForm = this.fb.group({
+    code: this.fb.control('', [Validators.required, Validators.minLength(6), Validators.maxLength(6)])
+  });
+
   readonly registerForm = this.fb.group(
     {
       username: this.fb.control('', [Validators.required, Validators.minLength(3)]),
@@ -75,11 +79,35 @@ export class AuthFormComponent {
     }
 
     if (this.mode() === 'login') {
+      if (this.auth.pendingTwoFactorToken()) {
+        this.submitTwoFactor();
+        return;
+      }
       this.submitLogin();
       return;
     }
 
     this.submitRegister();
+  }
+
+  resendTwoFactorCode(): void {
+    if (!this.auth.pendingTwoFactorToken() || this.auth.authenticating()) {
+      return;
+    }
+
+    this.error.set(null);
+    this.auth.authError.set(null);
+    this.auth.resendTwoFactor().subscribe((ok) => {
+      if (!ok) {
+        this.error.set(this.auth.authError() ?? 'Unable to resend verification code.');
+      }
+    });
+  }
+
+  backToPasswordLogin(): void {
+    this.auth.cancelTwoFactor();
+    this.twoFactorForm.reset({ code: '' });
+    this.error.set(null);
   }
 
   private submitLogin(): void {
@@ -127,6 +155,26 @@ export class AuthFormComponent {
 
       this.registerForm.controls.password.setValue('');
       this.registerForm.controls.confirm_password.setValue('');
+    });
+  }
+
+  private submitTwoFactor(): void {
+    if (this.twoFactorForm.invalid) {
+      this.twoFactorForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = this.twoFactorForm.getRawValue();
+    const code = String(raw.code ?? '').trim();
+    this.error.set(null);
+    this.auth.authError.set(null);
+    this.auth.verifyTwoFactor(code).subscribe((ok) => {
+      if (!ok) {
+        this.error.set(this.auth.authError() ?? 'Invalid verification code.');
+        return;
+      }
+      this.twoFactorForm.reset({ code: '' });
+      this.loginForm.controls.password.setValue('');
     });
   }
 

@@ -12,12 +12,15 @@
   "main": "index.js",
   "scripts": {
     "build": "node --check index.js",
+    "start": "node index.js",
+    "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "migrate": "npm run migrate:profile-image && npm run migrate:set-instructions && npm run migrate:user-sets-public && npm run migrate:email-verification",
+    "migrate": "npm run migrate:profile-image && npm run migrate:set-instructions && npm run migrate:user-sets-public && npm run migrate:email-verification && npm run migrate:two-factor",
     "migrate:profile-image": "node scripts/migrate-add-profile-image-url.js",
     "migrate:set-instructions": "node scripts/migrate-add-set-instructions-table.js",
     "migrate:user-sets-public": "node scripts/migrate-standardize-user-sets-public.js",
     "migrate:email-verification": "node scripts/migrate-add-email-verification.js",
+    "migrate:two-factor": "node scripts/migrate-add-two-factor-columns.js",
     "enrich:instructions": "node scripts/enrich-set-instructions.js",
     "enrich:instructions:set-pages": "node scripts/enrich-set-instructions.js --mode set-page",
     "enrich:instructions:lego": "node scripts/enrich-set-instructions.js --mode lego-search --locale en-us"

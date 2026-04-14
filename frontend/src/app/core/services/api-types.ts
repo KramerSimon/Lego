@@ -5,14 +5,38 @@ export interface AuthUser {
   full_name?: string;
   profile_image_url?: string | null;
   is_admin?: boolean;
+  email_verified?: boolean;
+  two_factor_email_enabled?: boolean;
   onboarding_guide_required?: boolean;
   onboarding_completed?: boolean;
   onboarding_completed_at?: string | null;
 }
 
 export interface AuthLoginResponse {
+  token?: string;
+  user?: AuthUser;
+  requires_two_factor?: boolean;
+  two_factor_token?: string;
+  message?: string;
+}
+
+export interface AuthVerifyTwoFactorPayload {
+  two_factor_token: string;
+  code: string;
+}
+
+export interface AuthVerifyTwoFactorResponse {
   token: string;
   user: AuthUser;
+}
+
+export interface AuthResendTwoFactorPayload {
+  two_factor_token: string;
+}
+
+export interface AuthResendTwoFactorResponse {
+  sent?: boolean;
+  message: string;
 }
 
 export interface AuthRegisterPayload {

@@ -26,6 +26,64 @@ function login(request, response) {
         response.status(403).json({ error: message });
         return;
       }
+      if (message.startsWith('Failed to send verification email.') || message.startsWith('Failed to send 2FA code.')) {
+        response.status(502).json({ error: message });
+        return;
+      }
+      response.status(500).json({ error: message });
+    });
+}
+
+function verifyTwoFactor(request, response) {
+  const twoFactorToken = request.body?.two_factor_token;
+  const code = request.body?.code;
+
+  authModel.verifyTwoFactor(twoFactorToken, code)
+    .then((result) => {
+      response.json(result);
+    })
+    .catch((error) => {
+      const message = error?.message || 'Two-factor verification failed';
+      if (message === 'Two-factor token and code are required') {
+        response.status(400).json({ error: message });
+        return;
+      }
+      if (
+        message === 'Invalid two-factor token'
+        || message === 'Two-factor code is invalid or expired'
+      ) {
+        response.status(401).json({ error: message });
+        return;
+      }
+      if (message === 'Two-factor authentication is not enabled for this account') {
+        response.status(400).json({ error: message });
+        return;
+      }
+      response.status(500).json({ error: message });
+    });
+}
+
+function resendTwoFactor(request, response) {
+  const twoFactorToken = request.body?.two_factor_token;
+
+  authModel.resendTwoFactor(twoFactorToken)
+    .then((result) => {
+      response.json(result);
+    })
+    .catch((error) => {
+      const message = error?.message || 'Unable to resend two-factor code';
+      if (message === 'Two-factor token is required' || message === 'Invalid two-factor token') {
+        response.status(400).json({ error: message });
+        return;
+      }
+      if (message === 'Two-factor authentication is not enabled for this account') {
+        response.status(400).json({ error: message });
+        return;
+      }
+      if (message.startsWith('Failed to send 2FA code.')) {
+        response.status(502).json({ error: message });
+        return;
+      }
       response.status(500).json({ error: message });
     });
 }
@@ -153,4 +211,4 @@ function completeOnboarding(request, response) {
     });
 }
 
-export { login, register, me, completeOnboarding, verifyEmail, verifyEmailFromLink, resendVerification };
+export { login, register, me, completeOnboarding, verifyEmail, verifyEmailFromLink, resendVerification, verifyTwoFactor, resendTwoFactor };

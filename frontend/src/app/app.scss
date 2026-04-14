@@ -46,8 +46,8 @@
 	border-radius: 999px;
 	font-weight: 700;
 	letter-spacing: 0.01em;
-	background: linear-gradient(90deg, #0b7285 0%, #1098ad 100%);
-	color: #ffffff;
+	background: var(--lego-btn-primary-bg);
+	color: var(--lego-btn-primary-fg);
 	transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
@@ -292,14 +292,14 @@
 .workspace-nav button {
 	border-radius: 999px;
 	font-weight: 700;
-	border-color: #9fc1cd;
-	color: #164554;
-	background: #f4fbfe;
+	border-color: var(--lego-btn-stroked-border);
+	color: var(--lego-btn-stroked-fg);
+	background: var(--lego-btn-stroked-bg);
 }
 
 .workspace-nav button.active {
-	background: linear-gradient(90deg, #0b7285 0%, #1098ad 100%);
-	color: #ffffff;
+	background: var(--lego-btn-primary-bg);
+	color: var(--lego-btn-primary-fg);
 	border-color: transparent;
 }
 
@@ -313,7 +313,7 @@
 .quickstart-card,
 .workflow-card {
 	border-radius: 14px;
-	border: 1px solid #d2e4eb;
+	border: 1px solid var(--lego-card-border);
 	box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
 	padding: 14px 16px;
 }
@@ -322,11 +322,13 @@
 	grid-column: 1;
 	border: 0;
 	box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
-	background: linear-gradient(180deg, #f5fbfd 0%, #ffffff 100%);
+	background: linear-gradient(180deg, color-mix(in srgb, var(--lego-accent) 8%, var(--lego-card-bg)) 0%, var(--lego-card-bg) 100%);
 }
 
 .workflow-card {
 	grid-column: 2;
+	background: var(--lego-card-bg);
+	color: var(--lego-form-ink);
 }
 
 .quickstart-card .mat-mdc-card-title,
@@ -357,19 +359,19 @@
 }
 
 .quick-actions .action-primary {
-	background: linear-gradient(90deg, #0b7285 0%, #1098ad 100%);
-	color: #ffffff;
+	background: var(--lego-btn-primary-bg);
+	color: var(--lego-btn-primary-fg);
 }
 
 .quick-actions .action-secondary {
-	border-color: #8eacb8;
-	color: #194a58;
+	border-color: var(--lego-btn-stroked-border);
+	color: var(--lego-btn-stroked-fg);
 	background: rgba(255, 255, 255, 0.05);
 }
 
 .quick-actions .action-tertiary {
 	border-radius: 999px;
-	color: #325767;
+	color: var(--lego-ink-soft);
 	background: transparent;
 	font-weight: 700;
 }
@@ -398,7 +400,7 @@
 	gap: 8px;
 	border: 0;
 	background: transparent;
-	color: #325767;
+	color: var(--lego-ink-soft);
 	font: inherit;
 	font-weight: 700;
 	padding: 6px 0;
@@ -420,15 +422,15 @@
 }
 
 .workflow-step.done {
-	color: #1c6a37;
+	color: #1f8a4d;
 }
 
 .workflow-step.current {
-	color: #0b7285;
+	color: var(--lego-accent);
 }
 
 .workflow-step.todo {
-	color: #54717d;
+	color: var(--lego-form-label);
 }
 
 .admin-toolbar {
@@ -659,8 +661,8 @@
 		z-index: 26;
 		padding: 8px;
 		border-radius: 14px;
-		border: 1px solid #c9dbe3;
-		background: #ffffff;
+		border: 1px solid var(--lego-card-border);
+		background: var(--lego-card-bg);
 		box-shadow: 0 10px 22px rgba(15, 23, 42, 0.2);
 	}
 
@@ -672,7 +674,7 @@
 		font: inherit;
 		font-size: 0.76rem;
 		font-weight: 700;
-		color: #3b6372;
+		color: var(--lego-ink-soft);
 		display: grid;
 		justify-items: center;
 		align-content: center;
@@ -680,8 +682,8 @@
 	}
 
 	.mobile-bottom-nav button.active {
-		background: #e7f4f9;
-		color: #0b7285;
+		background: color-mix(in srgb, var(--lego-accent) 14%, var(--lego-card-bg));
+		color: var(--lego-accent);
 	}
 
 	.auth-gate {

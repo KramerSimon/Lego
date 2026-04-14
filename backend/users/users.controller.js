@@ -45,7 +45,8 @@ function updateMyUser(request, response) {
     username: request.body?.username,
     email: request.body?.email,
     full_name: request.body?.full_name,
-    password: request.body?.password
+    password: request.body?.password,
+    two_factor_email_enabled: request.body?.two_factor_email_enabled
   };
 
   if (request.file?.filename) {
