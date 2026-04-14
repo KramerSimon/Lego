@@ -18,6 +18,7 @@ import { PagedResult } from '../../../../core/services/api-types';
 import { UserMissingPartsApiService } from '../../../../core/services/user-missing-parts-api.service';
 import { SetsTableApiService, ThemesApiService, UsersApiService } from '../../../../core/services/tables/table-services.service';
 import { debounceTime, firstValueFrom } from 'rxjs';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'lego-user-missing-parts',
@@ -36,7 +37,8 @@ import { debounceTime, firstValueFrom } from 'rxjs';
     MatProgressSpinnerModule,
     MatSelectModule,
     MatSnackBarModule,
-    MatTableModule
+    MatTableModule,
+    TranslatePipe
   ],
   templateUrl: './user-missing-parts.component.html',
   styleUrls: ['./user-missing-parts.component.scss']
@@ -55,6 +57,8 @@ export class UserMissingPartsComponent implements OnInit {
   readonly loading = signal(false);
   readonly exporting = signal(false);
   readonly loadingSetOptions = signal(false);
+  readonly showFilters = signal(false);
+  readonly showDetails = signal(false);
   readonly rows = signal<Record<string, unknown>[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
@@ -78,8 +82,27 @@ export class UserMissingPartsComponent implements OnInit {
   readonly setSearchTerm = signal('');
   readonly setOptionsPage = signal(1);
   readonly setOptionsTotal = signal(0);
+  readonly activeFilterCount = computed(() => {
+    const raw = this.filters.getRawValue();
+    let count = 0;
+    if (Number(raw.user_id) > 0) {
+      count += 1;
+    }
+    if (String(raw.set_num ?? '').trim()) {
+      count += 1;
+    }
+    if (Number(raw.theme_id) > 0) {
+      count += 1;
+    }
+    return count;
+  });
 
-  readonly displayedColumns = [
+  readonly compactColumns = [
+    'part_name',
+    'quantity_missing',
+    'set'
+  ];
+  readonly detailedColumns = [
     'part_img_url',
     'part_num',
     'part_name',
@@ -89,6 +112,7 @@ export class UserMissingPartsComponent implements OnInit {
     'theme_name',
     'user'
   ];
+  readonly displayedColumns = signal<string[]>(this.compactColumns);
   readonly sortedRows = computed(() => this.rows());
 
   readonly filters = this.fb.group({
@@ -208,6 +232,19 @@ export class UserMissingPartsComponent implements OnInit {
     this.reload();
   }
 
+  toggleFilters(): void {
+    this.showFilters.update((current) => !current);
+  }
+
+  toggleDetails(): void {
+    const next = !this.showDetails();
+    this.showDetails.set(next);
+    this.displayedColumns.set(next ? this.detailedColumns : this.compactColumns);
+    if (!next && this.sortColumn() && !this.compactColumns.includes(this.sortColumn() ?? '')) {
+      this.clearSort();
+    }
+  }
+
   resetFilters(): void {
     this.filters.reset({
       user_id: null,
@@ -311,6 +348,17 @@ export class UserMissingPartsComponent implements OnInit {
       return `${setNum} - ${setName}`;
     }
     return setNum;
+  }
+
+  missingBadgeClass(row: Record<string, unknown>): string {
+    const quantity = Number(row['quantity_missing'] ?? 0);
+    if (quantity >= 10) {
+      return 'badge-high';
+    }
+    if (quantity >= 4) {
+      return 'badge-medium';
+    }
+    return 'badge-low';
   }
 
   private loadFilterOptions(): void {

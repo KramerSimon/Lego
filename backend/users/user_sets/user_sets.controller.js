@@ -19,9 +19,25 @@ async function ensureOwnerOrAdmin(request, userSetId) {
   return ownerId === userId;
 }
 
+async function ensureReadableByUser(request, userSetId) {
+  const { userId, isAdmin } = authContext(request);
+  if (isAdmin) {
+    return true;
+  }
+  const accessInfo = await userSetModel.getAccessInfo(userSetId);
+  if (!accessInfo) {
+    return null;
+  }
+  return accessInfo.ownerId === userId || accessInfo.isPublic;
+}
+
 function getUserSets(request, response) {
   const { userId, isAdmin } = authContext(request);
-  const nextQuery = isAdmin ? request.query : { ...request.query, user_id: userId };
+  const nextQuery = {
+    ...request.query,
+    viewer_user_id: userId,
+    viewer_is_admin: isAdmin ? 1 : 0
+  };
 
   userSetModel.getAll(nextQuery)
     .then(items => {
@@ -71,14 +87,14 @@ function addUserSetWithParts(request, response) {
 
 function getUserSetBreakdown(request, response) {
   const userSetId = Number(request.params.id);
-  ensureOwnerOrAdmin(request, userSetId)
+  ensureReadableByUser(request, userSetId)
     .then((allowed) => {
       if (allowed === null) {
         response.status(404).json({ error: 'User set not found' });
         return;
       }
       if (!allowed) {
-        response.status(403).json({ error: 'You can only access your own set breakdown' });
+        response.status(403).json({ error: 'You are not allowed to access this set breakdown' });
         return;
       }
       return userSetModel.getBreakdown(userSetId)
@@ -177,14 +193,14 @@ function deleteUserSetBreakdownPart(request, response) {
 }
 function getUserSet(request, response) {
   const id = Number(request.params.id);
-  ensureOwnerOrAdmin(request, id)
+  ensureReadableByUser(request, id)
     .then((allowed) => {
       if (allowed === null) {
         response.status(404).json({ error: 'User set not found' });
         return;
       }
       if (!allowed) {
-        response.status(403).json({ error: 'You can only access your own sets' });
+        response.status(403).json({ error: 'You are not allowed to access this set' });
         return;
       }
 

@@ -16,6 +16,7 @@ import { CatalogSetPart, CatalogSetPartsResponse, PagedResult } from '../../../.
 import { SetsApiService } from '../../../../core/services/sets-api.service';
 import { SetsTableApiService, ThemesApiService } from '../../../../core/services/tables/table-services.service';
 import { SETS_CONFIG } from '../../config/table-definitions';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'lego-sets',
@@ -33,7 +34,8 @@ import { SETS_CONFIG } from '../../config/table-definitions';
     MatButtonModule,
     MatTableModule,
     MatProgressSpinnerModule,
-    MatPaginatorModule
+    MatPaginatorModule,
+    TranslatePipe
   ],
   templateUrl: './sets.component.html',
   styleUrl: './sets.component.scss'

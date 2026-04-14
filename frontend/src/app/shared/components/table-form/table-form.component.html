@@ -1,14 +1,14 @@
 <mat-card class="entry-card" *ngIf="config().allowCreate !== false">
   <mat-card-header>
-    <mat-card-title>Add {{ config().title }}</mat-card-title>
-    <mat-card-subtitle>Insert a new row into {{ config().endpoint }}</mat-card-subtitle>
+    <mat-card-title>{{ 'Add' | t }} {{ config().title | t }}</mat-card-title>
+    <mat-card-subtitle>{{ 'Insert a new row into' | t }} {{ config().endpoint }}</mat-card-subtitle>
   </mat-card-header>
 
   <mat-card-content>
     <form [formGroup]="form()" class="entry-form" (ngSubmit)="onSubmit()">
       <ng-container *ngFor="let field of config().fields">
         <mat-form-field *ngIf="field.type !== 'checkbox'" appearance="outline">
-          <mat-label>{{ field.label }}</mat-label>
+          <mat-label>{{ field.label | t }}</mat-label>
           <input
             *ngIf="field.type !== 'select'"
             matInput
@@ -23,8 +23,8 @@
 
             <mat-option *ngIf="hasMoreOptions()(field)" class="load-more-option">
               <button mat-button type="button" (click)="onLoadMore(field, $event)" [disabled]="isSelectLoading()(field)">
-                <span *ngIf="!isSelectLoading()(field)">Load more</span>
-                <span *ngIf="isSelectLoading()(field)">Loading...</span>
+                <span *ngIf="!isSelectLoading()(field)">{{ 'Load more' | t }}</span>
+                <span *ngIf="isSelectLoading()(field)">{{ 'Loading...' | t }}</span>
               </button>
             </mat-option>
           </mat-select>
@@ -35,7 +35,7 @@
               [formControlName]="field.key"
               [matAutocomplete]="searchAuto"
               (input)="onSelectSearch(field, $any($event.target).value)"
-              [placeholder]="'Search ' + field.label.toLowerCase()"
+              [placeholder]="('Search' | t) + ' ' + ((field.label | t) | lowercase)"
             />
             <mat-autocomplete #searchAuto="matAutocomplete" [displayWith]="displaySelectOption(field)">
               <mat-option *ngFor="let option of getOptions()(field)" [value]="option.value">
@@ -43,8 +43,8 @@
               </mat-option>
               <mat-option *ngIf="hasMoreOptions()(field)" class="load-more-option">
                 <button mat-button type="button" (click)="onLoadMore(field, $event)" [disabled]="isSelectLoading()(field)">
-                  <span *ngIf="!isSelectLoading()(field)">Load more</span>
-                  <span *ngIf="isSelectLoading()(field)">Loading...</span>
+                  <span *ngIf="!isSelectLoading()(field)">{{ 'Load more' | t }}</span>
+                  <span *ngIf="isSelectLoading()(field)">{{ 'Loading...' | t }}</span>
                 </button>
               </mat-option>
             </mat-autocomplete>
@@ -52,18 +52,18 @@
         </mat-form-field>
 
         <mat-checkbox *ngIf="field.type === 'checkbox'" [formControlName]="field.key">
-          {{ field.label }}
+          {{ field.label | t }}
         </mat-checkbox>
       </ng-container>
 
       <div class="form-actions">
         <button mat-raised-button color="primary" type="submit" [disabled]="form().invalid || loading()">
           <mat-icon>add</mat-icon>
-          Create
+          {{ 'Create' | t }}
         </button>
         <button mat-stroked-button color="primary" type="button" (click)="onReload()" [disabled]="loading()">
           <mat-icon>refresh</mat-icon>
-          Refresh Table
+          {{ 'Refresh Table' | t }}
         </button>
       </div>
     </form>

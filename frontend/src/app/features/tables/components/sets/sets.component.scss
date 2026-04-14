@@ -117,6 +117,46 @@ mat-card-subtitle {
   padding: 18px;
 }
 
+.mobile-set-results {
+  display: none;
+}
+
+.mobile-set-card {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 10px;
+  border: 1px solid #d7e5eb;
+  border-radius: 12px;
+  padding: 10px;
+  background: #ffffff;
+  margin-bottom: 8px;
+}
+
+.mobile-set-thumb {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  border: 1px solid #d7e5eb;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.mobile-set-copy h3 {
+  margin: 0;
+  color: #193d4a;
+  font-size: 1rem;
+}
+
+.mobile-set-copy p {
+  margin: 4px 0 8px;
+  color: #4b6974;
+  font-size: 0.9rem;
+}
+
+.mobile-expand-btn {
+  width: 100%;
+}
+
 .table-wrap {
   width: 100%;
   overflow-x: auto;
@@ -391,6 +431,14 @@ mat-paginator {
 }
 
 @media (max-width: 500px) {
+  .mobile-set-results {
+    display: block;
+  }
+
+  .table-wrap {
+    display: none;
+  }
+
   .table-wrap {
     overflow-x: visible;
     border: none;
@@ -467,4 +515,14 @@ mat-paginator {
     margin: 0 0 10px;
     border-radius: 10px;
   }
+}
+
+:host-context([data-theme='dark']) .mobile-set-card {
+  background: var(--lego-card-bg);
+  border-color: var(--lego-card-border);
+}
+
+:host-context([data-theme='dark']) .mobile-set-thumb {
+  border-color: var(--lego-card-border);
+  background: var(--lego-surface-muted);
 }

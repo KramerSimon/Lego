@@ -9,8 +9,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { environment } from '../../../../../environments/environment';
-import { AuthApiService } from '../../../../core/services/auth-api.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { AuthUser } from '../../../../core/services/api-types';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'lego-account-settings-dialog',
@@ -24,7 +25,8 @@ import { AuthUser } from '../../../../core/services/api-types';
     MatIconModule,
     MatInputModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    TranslatePipe
   ],
   templateUrl: './account-settings-dialog.component.html',
   styleUrl: './account-settings-dialog.component.scss'
@@ -33,7 +35,7 @@ export class AccountSettingsDialogComponent {
   private readonly data = inject<AuthUser>(MAT_DIALOG_DATA);
   private readonly dialogRef = inject(MatDialogRef<AccountSettingsDialogComponent, AuthUser | null>);
   private readonly fb = inject(FormBuilder);
-  private readonly authApi = inject(AuthApiService);
+  private readonly auth = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
 
   readonly saving = signal(false);
@@ -116,7 +118,7 @@ export class AccountSettingsDialogComponent {
     }
 
     this.saving.set(true);
-    this.authApi.updateMyAccount(payload).subscribe({
+    this.auth.updateMyAccount(payload).subscribe({
       next: (response) => {
         this.saving.set(false);
         this.dialogRef.close(response.user);

@@ -1,7 +1,13 @@
 .page-bg {
 	min-height: 100vh;
-	padding: 20px 24px 28px;
+	padding: 20px clamp(20px, 4vw, 56px) 28px;
 	background: var(--lego-page-bg);
+}
+
+.content-shell {
+	max-width: 1500px;
+	margin: 0 auto;
+	padding-inline: clamp(14px, 2.5vw, 34px);
 }
 
 .hero-toolbar {
@@ -276,8 +282,222 @@
 	box-shadow: var(--lego-top-tabs-shadow);
 }
 
+.workspace-nav {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+	margin-bottom: 14px;
+}
+
+.workspace-nav button {
+	border-radius: 999px;
+	font-weight: 700;
+	border-color: #9fc1cd;
+	color: #164554;
+	background: #f4fbfe;
+}
+
+.workspace-nav button.active {
+	background: linear-gradient(90deg, #0b7285 0%, #1098ad 100%);
+	color: #ffffff;
+	border-color: transparent;
+}
+
+.dashboard-grid {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+	align-items: start;
+}
+
+.quickstart-card,
+.workflow-card {
+	border-radius: 14px;
+	border: 1px solid #d2e4eb;
+	box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+	padding: 14px 16px;
+}
+
+.quickstart-card {
+	grid-column: 1;
+	border: 0;
+	box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+	background: linear-gradient(180deg, #f5fbfd 0%, #ffffff 100%);
+}
+
+.workflow-card {
+	grid-column: 2;
+}
+
+.quickstart-card .mat-mdc-card-title,
+.workflow-card .mat-mdc-card-title {
+	font-size: clamp(1.45rem, 2.1vw, 2rem);
+	line-height: 1.2;
+	margin: 0 0 4px;
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.quickstart-card .mat-mdc-card-subtitle {
+	margin: 0;
+	line-height: 1.3;
+}
+
+.quick-actions {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+	margin-top: 8px;
+}
+
+.quick-actions button {
+	border-radius: 999px;
+	font-weight: 700;
+	min-height: 42px;
+}
+
+.quick-actions .action-primary {
+	background: linear-gradient(90deg, #0b7285 0%, #1098ad 100%);
+	color: #ffffff;
+}
+
+.quick-actions .action-secondary {
+	border-color: #8eacb8;
+	color: #194a58;
+	background: rgba(255, 255, 255, 0.05);
+}
+
+.quick-actions .action-tertiary {
+	border-radius: 999px;
+	color: #325767;
+	background: transparent;
+	font-weight: 700;
+}
+
+.workflow-steps {
+	display: grid;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.workflow-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.workflow-toggle {
+	border-radius: 999px;
+	font-weight: 700;
+}
+
+.workflow-step {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	border: 0;
+	background: transparent;
+	color: #325767;
+	font: inherit;
+	font-weight: 700;
+	padding: 6px 0;
+	cursor: pointer;
+	text-align: left;
+	border-radius: 10px;
+	transition: background-color 170ms ease, transform 170ms ease;
+}
+
+.workflow-step:hover {
+	background: rgba(11, 114, 133, 0.08);
+	transform: translateX(2px);
+}
+
+.workflow-step .mat-icon {
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+}
+
+.workflow-step.done {
+	color: #1c6a37;
+}
+
+.workflow-step.current {
+	color: #0b7285;
+}
+
+.workflow-step.todo {
+	color: #54717d;
+}
+
+.admin-toolbar {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 6px;
+}
+
+.admin-tools {
+	grid-column: 1 / -1;
+	margin-top: 4px;
+}
+
+.dashboard-grid .nested-tabs {
+	grid-column: 1 / -1;
+}
+
+:host-context([data-theme='dark']) .quickstart-card,
+:host-context([data-theme='dark']) .workflow-card {
+	background: var(--lego-card-bg);
+	border-color: var(--lego-card-border);
+}
+
+:host-context([data-theme='dark']) .workflow-card ol {
+	color: #c6dde5;
+}
+
+:host-context([data-theme='dark']) .quick-actions .action-secondary {
+	border-color: #3d6471;
+	color: #d3eaf1;
+}
+
+:host-context([data-theme='dark']) .quick-actions .action-tertiary {
+	color: #b9d8e2;
+}
+
+:host-context([data-theme='dark']) .workflow-step.done {
+	color: #85d8a4;
+}
+
+:host-context([data-theme='dark']) .workflow-step.current {
+	color: #6dd7e9;
+}
+
+:host-context([data-theme='dark']) .workflow-step.todo {
+	color: #9ebdc7;
+}
+
+:host-context([data-theme='dark']) .quickstart-card {
+	background: linear-gradient(180deg, rgba(20, 42, 52, 0.8) 0%, var(--lego-card-bg) 100%);
+}
+
+:host-context([data-theme='dark']) .workflow-step:hover {
+	background: rgba(109, 215, 233, 0.12);
+}
+
+:host-context([data-theme='dark']) .workspace-nav button {
+	background: #14303c;
+	color: #cbe7ef;
+	border-color: #2e5360;
+}
+
 .nested-tabs {
 	padding: 12px;
+}
+
+.mobile-bottom-nav,
+.mobile-fab {
+	display: none;
 }
 
 :host ::ng-deep .mat-mdc-tab-header-pagination {
@@ -299,7 +519,12 @@
 
 @media (max-width: 700px) {
 	.page-bg {
-		padding: 10px;
+		padding: 10px 12px;
+		padding-bottom: 86px;
+	}
+
+	.content-shell {
+		padding-inline: 8px;
 	}
 
 	.toolbar-btn-text {
@@ -358,12 +583,105 @@
 	}
 
 	.toolbar-title {
-		flex: 1 1 auto;
-		min-width: 0;
+		flex: 0 0 auto;
+		min-width: auto;
+		gap: 0;
+	}
+
+	.toolbar-title span {
+		display: none;
+	}
+
+	.hero-copy h1 {
+		font-size: clamp(1.4rem, 4vw, 1.9rem);
+	}
+
+	.hero-copy p {
+		margin-top: 4px;
+		font-size: 0.92rem;
 	}
 
 	.nested-tabs {
 		padding: 8px 6px;
+	}
+
+	.workspace-nav {
+		display: none;
+	}
+
+	.dashboard-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.quickstart-card,
+	.workflow-card,
+	.dashboard-grid .nested-tabs,
+	.admin-tools {
+		grid-column: 1;
+	}
+
+	.workspace-nav button {
+		padding: 0 10px;
+		min-width: 0;
+	}
+
+	.quick-actions {
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.quick-actions button {
+		width: 100%;
+	}
+
+	.workflow-step {
+		padding: 8px 0;
+	}
+
+	.mobile-fab {
+		display: inline-flex;
+		position: fixed;
+		right: 14px;
+		bottom: 84px;
+		z-index: 28;
+		background: linear-gradient(90deg, #0b7285 0%, #1098ad 100%);
+		color: #fff;
+	}
+
+	.mobile-bottom-nav {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 6px;
+		position: fixed;
+		left: 8px;
+		right: 8px;
+		bottom: 8px;
+		z-index: 26;
+		padding: 8px;
+		border-radius: 14px;
+		border: 1px solid #c9dbe3;
+		background: #ffffff;
+		box-shadow: 0 10px 22px rgba(15, 23, 42, 0.2);
+	}
+
+	.mobile-bottom-nav button {
+		border: 0;
+		background: transparent;
+		min-height: 46px;
+		border-radius: 10px;
+		font: inherit;
+		font-size: 0.76rem;
+		font-weight: 700;
+		color: #3b6372;
+		display: grid;
+		justify-items: center;
+		align-content: center;
+		gap: 2px;
+	}
+
+	.mobile-bottom-nav button.active {
+		background: #e7f4f9;
+		color: #0b7285;
 	}
 
 	.auth-gate {
@@ -402,6 +720,7 @@
 @media (max-width: 430px) {
 	.page-bg {
 		padding: 6px;
+		padding-bottom: 82px;
 	}
 
 	.hero-toolbar {
@@ -445,4 +764,30 @@
 	:host ::ng-deep .top-tabs .mdc-tab {
 		padding: 0 4px;
 	}
+
+	.mobile-bottom-nav {
+		left: 6px;
+		right: 6px;
+		bottom: 6px;
+		padding: 7px;
+	}
+
+	.mobile-fab {
+		right: 12px;
+		bottom: 78px;
+	}
+}
+
+:host-context([data-theme='dark']) .mobile-bottom-nav {
+	background: #0f232b;
+	border-color: #2b4955;
+}
+
+:host-context([data-theme='dark']) .mobile-bottom-nav button {
+	color: #a8cad5;
+}
+
+:host-context([data-theme='dark']) .mobile-bottom-nav button.active {
+	background: #173643;
+	color: #6dd7e9;
 }

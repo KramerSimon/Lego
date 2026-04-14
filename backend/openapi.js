@@ -61,6 +61,14 @@ const openApiSpec = {
           }
         }
       },
+      RegisterResponse: {
+        type: 'object',
+        properties: {
+          requires_email_verification: { type: 'boolean', example: true },
+          email: { type: 'string', example: 'simon@example.com' },
+          message: { type: 'string', example: 'Verification email sent. Please check your inbox.' }
+        }
+      },
       ErrorResponse: {
         type: 'object',
         properties: {
@@ -91,6 +99,7 @@ const openApiSpec = {
               user_id: { type: 'integer', example: 1 },
               set_num: { type: 'string', example: '7922-1' },
               quantity: { type: 'integer', example: 1 },
+              is_public: { type: 'boolean', nullable: true, example: true },
               condition_public: { type: 'string', nullable: true },
               purchase_price: { type: 'number', nullable: true }
             }
@@ -142,6 +151,14 @@ const openApiSpec = {
                 schema: { $ref: '#/components/schemas/ErrorResponse' }
               }
             }
+          },
+          '403': {
+            description: 'Email not verified',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
           }
         }
       }
@@ -160,10 +177,10 @@ const openApiSpec = {
         },
         responses: {
           '201': {
-            description: 'Registered and authenticated',
+            description: 'Registered. Email verification required before login.',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/LoginResponse' }
+                schema: { $ref: '#/components/schemas/RegisterResponse' }
               }
             }
           },
@@ -177,6 +194,69 @@ const openApiSpec = {
           },
           '409': {
             description: 'Duplicate username or email',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/auth/verify-email': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Verify user email address using token',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['token'],
+                properties: {
+                  token: { type: 'string' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': { description: 'Email verified' },
+          '400': {
+            description: 'Invalid token',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/auth/resend-verification': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Resend email verification link',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['identifier'],
+                properties: {
+                  identifier: { type: 'string', example: 'simon@example.com or simon' },
+                  email: { type: 'string', example: 'simon@example.com' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': { description: 'Resent' },
+          '400': {
+            description: 'Bad request',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -282,7 +362,10 @@ const openApiSpec = {
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
-          { name: 'pageSize', in: 'query', schema: { type: 'integer', default: 25 } }
+          { name: 'pageSize', in: 'query', schema: { type: 'integer', default: 25 } },
+          { name: 'user_id', in: 'query', schema: { type: 'integer' } },
+          { name: 'sortBy', in: 'query', schema: { type: 'string' } },
+          { name: 'sortDir', in: 'query', schema: { type: 'string', enum: ['asc', 'desc'] } }
         ],
         responses: {
           '200': {

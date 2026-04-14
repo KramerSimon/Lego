@@ -29,6 +29,7 @@ import { SetsTableApiService, UserSetsTableApiService, UsersApiService } from '.
 import { forkJoin } from 'rxjs';
 import { UserSetConfirmDialogComponent } from './user-set-confirm-dialog.component';
 import { USER_SETS_CONFIG } from '../../config/table-definitions';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'lego-user-sets',
@@ -49,13 +50,23 @@ import { USER_SETS_CONFIG } from '../../config/table-definitions';
     MatProgressSpinnerModule,
     MatSelectModule,
     MatSnackBarModule,
-    MatTableModule
+    MatTableModule,
+    TranslatePipe
   ],
   templateUrl: './user-sets.component.html',
   styleUrl: './user-sets.component.scss'
 })
 export class UserSetsComponent implements OnInit {
   readonly config = USER_SETS_CONFIG;
+  readonly publicConditionOptions: Array<{ value: string; label: string }> = [
+    { value: '', label: 'Unknown condition' },
+    { value: 'sealed', label: 'Sealed' },
+    { value: 'like_new', label: 'Like New' },
+    { value: 'used_good', label: 'Used - Good' },
+    { value: 'used_fair', label: 'Used - Fair' },
+    { value: 'incomplete', label: 'Incomplete' },
+    { value: 'for_parts', label: 'For Parts' }
+  ];
   private readonly userSetsApi = inject(UserSetsApiService);
   private readonly userSetsTableApi = inject(UserSetsTableApiService);
   private readonly usersApi = inject(UsersApiService);
@@ -65,6 +76,7 @@ export class UserSetsComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private setSearchTimer: ReturnType<typeof setTimeout> | null = null;
+  private mobileMediaQuery: MediaQueryList | null = null;
 
   readonly isAdmin = computed(() => Boolean(this.auth.user()?.is_admin));
 
@@ -73,6 +85,12 @@ export class UserSetsComponent implements OnInit {
   readonly loadingParts = signal(false);
   readonly loadingCatalog = signal(false);
   readonly saving = signal(false);
+  readonly showCreateForm = signal(false);
+  readonly showAdvancedOptions = signal(false);
+  readonly showCatalogSection = signal(false);
+  readonly showCatalogFilters = signal(false);
+  readonly isMobileLayout = signal(false);
+  readonly activeMobileStep = signal<1 | 2 | 3>(1);
   readonly setParts = signal<UserSetPartSelection[]>([]);
   readonly setSearchTerm = signal('');
   readonly users = signal<Array<{ user_id: number; label: string }>>([]);
@@ -96,6 +114,7 @@ export class UserSetsComponent implements OnInit {
   readonly catalogDetailColumns = ['expandedDetail'];
   readonly sortColumn = signal<string | null>(null);
   readonly sortDirection = signal<'asc' | 'desc'>('asc');
+  readonly catalogUserFilter = signal<number | 'all'>('all');
   readonly sortedCatalogRows = computed(() => this.rows());
 
   readonly expandedUserSetId = signal<number | null>(null);
@@ -173,11 +192,13 @@ export class UserSetsComponent implements OnInit {
     user_id: this.fb.control<number | null>(null, [Validators.required]),
     set_num: this.fb.control<string>('', [Validators.required]),
     quantity: this.fb.control<number>(1, [Validators.required, Validators.min(1)]),
+    is_public: this.fb.control<boolean>(false),
     condition_public: this.fb.control<string>(''),
     purchase_price: this.fb.control<number | null>(null)
   });
 
   ngOnInit(): void {
+    this.initializeResponsiveState();
     this.applyCurrentUserConstraint();
     this.loadOptions();
     this.reloadCatalog();
@@ -243,11 +264,71 @@ export class UserSetsComponent implements OnInit {
     this.reloadCatalog();
   }
 
+  setCatalogUserFilter(value: string): void {
+    const normalized = String(value ?? '').trim();
+    if (!normalized || normalized === 'all') {
+      this.catalogUserFilter.set('all');
+      this.page.set(1);
+      this.reloadCatalog();
+      return;
+    }
+
+    const nextUserId = Number(normalized);
+    if (!Number.isFinite(nextUserId) || nextUserId <= 0) {
+      return;
+    }
+
+    this.catalogUserFilter.set(nextUserId);
+    this.page.set(1);
+    this.reloadCatalog();
+  }
+
+  catalogUserFilterValue(): string {
+    const value = this.catalogUserFilter();
+    return value === 'all' ? 'all' : String(value);
+  }
+
+  catalogUserOptionValue(userId: number): string {
+    return String(userId);
+  }
+
   handleSetPanelOpened(opened: boolean): void {
     if (opened) {
       this.setSearchTerm.set('');
       this.searchSetOptions('');
     }
+  }
+
+  toggleCreateForm(): void {
+    this.showCreateForm.update((current) => !current);
+  }
+
+  openCreateForm(): void {
+    this.showCreateForm.set(true);
+  }
+
+  toggleAdvancedOptions(): void {
+    this.showAdvancedOptions.update((current) => !current);
+  }
+
+  openMobileStep(step: 1 | 2 | 3): void {
+    this.activeMobileStep.set(step);
+  }
+
+  isStepVisible(step: 1 | 2 | 3): boolean {
+    return !this.isMobileLayout() || this.activeMobileStep() === step;
+  }
+
+  openCatalogSection(): void {
+    this.showCatalogSection.set(true);
+  }
+
+  toggleCatalogSection(): void {
+    this.showCatalogSection.update((current) => !current);
+  }
+
+  toggleCatalogFilters(): void {
+    this.showCatalogFilters.update((current) => !current);
   }
 
   toggleCatalogExpand(row: Record<string, unknown>): void {
@@ -326,6 +407,15 @@ export class UserSetsComponent implements OnInit {
     }
 
     if (column !== 'owned_complete') {
+      if (column === 'is_public') {
+        const numeric = Number(value);
+        if (Number.isFinite(numeric)) {
+          return numeric > 0 ? 'Yes' : 'No';
+        }
+        if (typeof value === 'boolean') {
+          return value ? 'Yes' : 'No';
+        }
+      }
       return value;
     }
 
@@ -563,6 +653,7 @@ export class UserSetsComponent implements OnInit {
         owned_quantity: hasPart ? requiredTotal : 0
       };
     }));
+    this.triggerHapticFeedback();
   }
 
   setHasPart(index: number, hasPart: boolean): void {
@@ -647,6 +738,7 @@ export class UserSetsComponent implements OnInit {
         user_id: userId,
         set_num: setNum,
         quantity,
+        is_public: Boolean(raw.is_public),
         condition_public: (raw.condition_public ?? '').trim() || undefined,
         purchase_price: purchasePrice == null ? undefined : Number(purchasePrice)
       },
@@ -656,6 +748,7 @@ export class UserSetsComponent implements OnInit {
           this.saving.set(false);
           this.summary.set(result.summary);
           this.snackBar.open('User set saved. User parts and missing parts generated.', 'Close', { duration: 2800 });
+          this.triggerHapticFeedback();
           this.reloadCatalog();
         },
         error: () => {
@@ -668,22 +761,6 @@ export class UserSetsComponent implements OnInit {
 
   private loadOptions(): void {
     this.loadingOptions.set(true);
-
-    const currentUser = this.auth.user();
-    if (!this.isAdmin() && currentUser) {
-      this.users.set([{
-        user_id: Number(currentUser.user_id),
-        label: this.buildUserSummaryLabel({
-          full_name: currentUser.full_name,
-          username: currentUser.username,
-          email: currentUser.email,
-          user_id: currentUser.user_id
-        })
-      }]);
-      this.loadingOptions.set(false);
-      this.searchSetOptions('');
-      return;
-    }
 
     forkJoin([
       this.usersApi.getRows(1, 500)
@@ -704,6 +781,25 @@ export class UserSetsComponent implements OnInit {
         this.snackBar.open('Failed to load users.', 'Close', { duration: 2500 });
       }
     });
+  }
+
+  private initializeResponsiveState(): void {
+    this.mobileMediaQuery = window.matchMedia('(max-width: 800px)');
+    const applyState = (matches: boolean): void => {
+      this.isMobileLayout.set(matches);
+      if (!matches) {
+        this.activeMobileStep.set(1);
+      }
+    };
+
+    applyState(this.mobileMediaQuery.matches);
+    this.mobileMediaQuery.addEventListener('change', (event) => applyState(event.matches));
+  }
+
+  private triggerHapticFeedback(): void {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(12);
+    }
   }
 
   private applyCurrentUserConstraint(): void {
@@ -803,11 +899,17 @@ export class UserSetsComponent implements OnInit {
     this.loadingCatalog.set(true);
     const sortColumn = this.resolveServerSortColumn(this.sortColumn());
     const sortDirection = this.sortDirection();
-
-    this.userSetsTableApi.getRows(this.page(), this.pageSize(), {
+    const userFilter = this.catalogUserFilter();
+    const extraParams: Record<string, string | number> = {
       ...(sortColumn ? { sortBy: sortColumn } : {}),
       sortDir: sortDirection
-    }).subscribe({
+    };
+
+    if (typeof userFilter === 'number' && Number.isFinite(userFilter) && userFilter > 0) {
+      extraParams['user_id'] = userFilter;
+    }
+
+    this.userSetsTableApi.getRows(this.page(), this.pageSize(), extraParams).subscribe({
       next: (response) => {
         this.loadingCatalog.set(false);
         const resolvedRows = Array.isArray(response)
@@ -894,7 +996,7 @@ export class UserSetsComponent implements OnInit {
   }
 
   private buildCatalogColumns(rows: Record<string, unknown>[]): string[] {
-    const preferred = ['user_id', 'set_num', 'set_name', 'img_url', 'quantity'];
+    const preferred = ['user_id', 'set_num', 'set_name', 'img_url', 'quantity', 'is_public', 'condition_public'];
     if (!rows.length) {
       return [...preferred, 'expand'];
     }
@@ -1125,6 +1227,7 @@ export class UserSetsComponent implements OnInit {
       'set_name',
       'img_url',
       'quantity',
+      'is_public',
       'condition_public',
       'purchase_price',
       'owned_since',

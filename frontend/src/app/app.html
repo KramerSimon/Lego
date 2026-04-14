@@ -2,21 +2,30 @@
 	<mat-toolbar class="hero-toolbar">
 		<div class="toolbar-title" data-guide-id="toolbar-title">
 			<mat-icon>construction</mat-icon>
-			<span>{{ title }}</span>
+			<span>{{ title | t }}</span>
 		</div>
 		<span class="spacer"></span>
+		<button class="theme-btn" mat-stroked-button type="button" [matMenuTriggerFor]="languageMenu">
+			<mat-icon>translate</mat-icon>
+			<span class="toolbar-btn-text">{{ 'Language' | t }}: {{ languageCode() }}</span>
+		</button>
+		<mat-menu #languageMenu="matMenu" class="lego-select-panel">
+			<button mat-menu-item type="button" *ngFor="let option of languageOptions" (click)="setLanguage(option.code)">
+				<span>{{ option.label | t }}</span>
+			</button>
+		</mat-menu>
 		<button class="theme-btn" mat-stroked-button type="button" (click)="toggleTheme()">
 			<mat-icon>{{ theme() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
-			<span class="toolbar-btn-text">{{ theme() === 'dark' ? 'Light' : 'Dark' }}</span>
+			<span class="toolbar-btn-text">{{ (theme() === 'dark' ? 'Light' : 'Dark') | t }}</span>
 		</button>
 		<ng-container *ngIf="auth.user() as user">
 			<button class="pickabrick-btn" mat-flat-button type="button" (click)="openPickABrick()">
 				<mat-icon>open_in_new</mat-icon>
-				<span class="toolbar-btn-text">Pick a Brick</span>
+				<span class="toolbar-btn-text">{{ 'Pick a Brick' | t }}</span>
 			</button>
 			<button class="guide-btn" mat-stroked-button type="button" data-guide-id="open-guide" (click)="openGuide()">
 				<mat-icon>school</mat-icon>
-				<span class="toolbar-btn-text">Guide</span>
+				<span class="toolbar-btn-text">{{ 'Guide' | t }}</span>
 			</button>
 			<button class="account-btn" mat-stroked-button type="button" [matMenuTriggerFor]="accountMenu">
 				<span class="avatar-chip" [class.has-image]="profileImageUrl(user)">
@@ -35,190 +44,251 @@
 					</div>
 					<div class="account-menu-copy">
 						<div class="account-name">{{ user.full_name || user.username }}</div>
-						<div class="account-email">{{ user.email || 'No email set' }}</div>
+						<div class="account-email">{{ (user.email || 'No email set') | t }}</div>
 					</div>
 				</div>
 				<button mat-menu-item type="button" (click)="openAccountSettings()">
 					<mat-icon>manage_accounts</mat-icon>
-					<span>Account Settings</span>
+					<span>{{ 'Account Settings' | t }}</span>
+				</button>
+				<button mat-menu-item type="button" *ngIf="user.is_admin" (click)="openAdminTables()">
+					<mat-icon>tune</mat-icon>
+					<span>{{ 'Admin Tables' | t }}</span>
 				</button>
 				<button mat-menu-item type="button" (click)="auth.logout()">
 					<mat-icon>logout</mat-icon>
-					<span>Logout</span>
+					<span>{{ 'Logout' | t }}</span>
 				</button>
 			</mat-menu>
 		</ng-container>
 	</mat-toolbar>
 
 	<ng-container *ngIf="auth.user() as user; else loginOnly">
-		<section class="hero-copy">
-			<div class="hero-intro">
-				<img src="/icons/LegoBrickBuilder.png" alt="Build Desk" class="hero-logo" />
-				<div class="hero-text">
-					<h1>Build Desk</h1>
-					<p>Plan builds, track missing pieces, and browse your LEGO catalog in one place.</p>
+		<div class="content-shell">
+			<section class="hero-copy">
+				<div class="hero-intro">
+					<img src="/icons/LegoBrickBuilder.png" alt="Build Desk" class="hero-logo" />
+					<div class="hero-text">
+						<h1>{{ 'Build Desk' | t }}</h1>
+						<p>{{ 'Plan builds, track missing pieces, and browse your LEGO catalog in one place.' | t }}</p>
+					</div>
 				</div>
-			</div>
-		</section>
+			</section>
 
-		<mat-tab-group class="top-tabs" animationDuration="300ms" data-guide-id="main-tabs">
-			<mat-tab>
-				<ng-template mat-tab-label>
-					<span data-guide-id="tab-build-actions">Build Actions</span>
-				</ng-template>
-				<ng-template matTabContent>
-					<div class="nested-tabs">
-						<lego-user-sets></lego-user-sets>
-					</div>
-				</ng-template>
-			</mat-tab>
+			<nav class="workspace-nav" data-guide-id="main-tabs">
+				<button mat-stroked-button type="button" [class.active]="mainView() === 'dashboard'" (click)="setMainView('dashboard')">{{ 'Dashboard' | t }}</button>
+				<button mat-stroked-button type="button" [class.active]="mainView() === 'my-sets'" (click)="setMainView('my-sets')">{{ 'My Sets' | t }}</button>
+				<button mat-stroked-button type="button" [class.active]="mainView() === 'missing-parts'" (click)="setMainView('missing-parts')">{{ 'Missing Parts' | t }}</button>
+			</nav>
 
-			<mat-tab>
-				<ng-template mat-tab-label>
-					<span data-guide-id="tab-missing-parts">Missing Parts</span>
-				</ng-template>
-				<ng-template matTabContent>
-					<div class="nested-tabs">
-						<lego-user-missing-parts></lego-user-missing-parts>
-					</div>
-				</ng-template>
-			</mat-tab>
+			<section *ngIf="mainView() === 'dashboard'" class="dashboard-grid">
+			<mat-card class="quickstart-card">
+				<mat-card-title>{{ 'What do you want to do?' | t }}</mat-card-title>
+				<mat-card-subtitle>{{ 'Start with one task, then open details only when you need them.' | t }}</mat-card-subtitle>
+				<div class="quick-actions">
+					<button class="action-primary" mat-flat-button type="button" (click)="setMainView('my-sets')">
+						<mat-icon>add_box</mat-icon>
+						{{ 'Add New Set' | t }}
+					</button>
+					<button class="action-secondary" mat-stroked-button type="button" (click)="setMainView('missing-parts')">
+						<mat-icon>search</mat-icon>
+						{{ 'Review Missing Parts' | t }}
+					</button>
+					<button class="action-tertiary" mat-button type="button" (click)="openSetCatalog()">
+						<mat-icon>inventory_2</mat-icon>
+						{{ 'Discover Sets' | t }}
+					</button>
+				</div>
+			</mat-card>
 
-			<mat-tab>
-				<ng-template mat-tab-label>
-					<span data-guide-id="tab-set-catalog">Set Catalog</span>
-				</ng-template>
-				<ng-template matTabContent>
-					<div class="nested-tabs">
-						<lego-sets></lego-sets>
-					</div>
-				</ng-template>
-			</mat-tab>
+			<mat-card class="workflow-card">
+				<div class="workflow-head">
+					<mat-card-title>{{ 'Guided Workflow' | t }}</mat-card-title>
+					<button mat-button type="button" class="workflow-toggle" *ngIf="isMobileView()" (click)="toggleWorkflowExpanded()">
+						<mat-icon>{{ workflowExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+						{{ workflowExpanded() ? ('Hide Workflow' | t) : ('Open Workflow' | t) }}
+					</button>
+				</div>
+				<div class="workflow-steps" *ngIf="!isMobileView() || workflowExpanded()">
+					<button type="button" class="workflow-step" [ngClass]="workflowStepClass(1)" (click)="goToWorkflowStep(1)">
+						<mat-icon>{{ workflowStepIcon(1) }}</mat-icon>
+						<span>{{ 'Select Sets' | t }}</span>
+					</button>
+					<button type="button" class="workflow-step" [ngClass]="workflowStepClass(2)" (click)="goToWorkflowStep(2)">
+						<mat-icon>{{ workflowStepIcon(2) }}</mat-icon>
+						<span>{{ 'Check Parts' | t }}</span>
+					</button>
+					<button type="button" class="workflow-step" [ngClass]="workflowStepClass(3)" (click)="goToWorkflowStep(3)">
+						<mat-icon>{{ workflowStepIcon(3) }}</mat-icon>
+						<span>{{ 'See Missing' | t }}</span>
+					</button>
+					<button type="button" class="workflow-step" [ngClass]="workflowStepClass(4)" (click)="goToWorkflowStep(4)">
+						<mat-icon>{{ workflowStepIcon(4) }}</mat-icon>
+						<span>{{ 'Export / Buy' | t }}</span>
+					</button>
+				</div>
+			</mat-card>
 
-			<mat-tab *ngIf="user.is_admin" label="All Tables">
-				<ng-template matTabContent>
-					<mat-tab-group class="nested-tabs" animationDuration="250ms">
-						<mat-tab label="Inventories"><ng-template matTabContent><lego-inventories></lego-inventories></ng-template></mat-tab>
-						<mat-tab label="Inventory Parts"><ng-template matTabContent><lego-inventory-parts></lego-inventory-parts></ng-template></mat-tab>
-						<mat-tab label="Parts"><ng-template matTabContent><lego-parts></lego-parts></ng-template></mat-tab>
-						<mat-tab label="Part Categories"><ng-template matTabContent><lego-part-categories></lego-part-categories></ng-template></mat-tab>
-						<mat-tab label="Part Relationships"><ng-template matTabContent><lego-part-relationships></lego-part-relationships></ng-template></mat-tab>
-						<mat-tab label="Elements"><ng-template matTabContent><lego-elements></lego-elements></ng-template></mat-tab>
-						<mat-tab label="Colors"><ng-template matTabContent><lego-colors></lego-colors></ng-template></mat-tab>
-						<mat-tab label="Inventory Minifigs"><ng-template matTabContent><lego-inventory-minifigs></lego-inventory-minifigs></ng-template></mat-tab>
-						<mat-tab label="Minifigs"><ng-template matTabContent><lego-minifigs></lego-minifigs></ng-template></mat-tab>
-						<mat-tab label="Inventory Sets"><ng-template matTabContent><lego-inventory-sets></lego-inventory-sets></ng-template></mat-tab>
-						<mat-tab label="Sets"><ng-template matTabContent><lego-sets></lego-sets></ng-template></mat-tab>
-						<mat-tab label="Themes"><ng-template matTabContent><lego-themes></lego-themes></ng-template></mat-tab>
-						<mat-tab label="Users"><ng-template matTabContent><lego-users></lego-users></ng-template></mat-tab>
-						<mat-tab label="User Parts"><ng-template matTabContent><lego-user-parts></lego-user-parts></ng-template></mat-tab>
-						<mat-tab label="User Missing Parts"><ng-template matTabContent><lego-user-missing-parts></lego-user-missing-parts></ng-template></mat-tab>
-						<mat-tab label="User Sets"><ng-template matTabContent><lego-user-sets></lego-user-sets></ng-template></mat-tab>
-					</mat-tab-group>
-				</ng-template>
-			</mat-tab>
-		</mat-tab-group>
+			<section class="nested-tabs" *ngIf="showSetCatalog()">
+				<lego-sets></lego-sets>
+			</section>
+
+			<section class="admin-tools" *ngIf="user.is_admin && showAdminTables()">
+				<div class="admin-toolbar">
+					<button mat-button type="button" (click)="toggleAdminTables()">
+						<mat-icon>expand_less</mat-icon>
+						{{ 'Hide Admin Tables' | t }}
+					</button>
+				</div>
+				<mat-tab-group class="top-tabs" animationDuration="250ms">
+					<mat-tab [label]="'Inventories' | t"><ng-template matTabContent><lego-inventories></lego-inventories></ng-template></mat-tab>
+					<mat-tab [label]="'Inventory Parts' | t"><ng-template matTabContent><lego-inventory-parts></lego-inventory-parts></ng-template></mat-tab>
+					<mat-tab [label]="'Parts' | t"><ng-template matTabContent><lego-parts></lego-parts></ng-template></mat-tab>
+					<mat-tab [label]="'Part Categories' | t"><ng-template matTabContent><lego-part-categories></lego-part-categories></ng-template></mat-tab>
+					<mat-tab [label]="'Part Relationships' | t"><ng-template matTabContent><lego-part-relationships></lego-part-relationships></ng-template></mat-tab>
+					<mat-tab [label]="'Elements' | t"><ng-template matTabContent><lego-elements></lego-elements></ng-template></mat-tab>
+					<mat-tab [label]="'Colors' | t"><ng-template matTabContent><lego-colors></lego-colors></ng-template></mat-tab>
+					<mat-tab [label]="'Inventory Minifigs' | t"><ng-template matTabContent><lego-inventory-minifigs></lego-inventory-minifigs></ng-template></mat-tab>
+					<mat-tab [label]="'Minifigs' | t"><ng-template matTabContent><lego-minifigs></lego-minifigs></ng-template></mat-tab>
+					<mat-tab [label]="'Inventory Sets' | t"><ng-template matTabContent><lego-inventory-sets></lego-inventory-sets></ng-template></mat-tab>
+					<mat-tab [label]="'Sets' | t"><ng-template matTabContent><lego-sets></lego-sets></ng-template></mat-tab>
+					<mat-tab [label]="'Themes' | t"><ng-template matTabContent><lego-themes></lego-themes></ng-template></mat-tab>
+					<mat-tab [label]="'Users' | t"><ng-template matTabContent><lego-users></lego-users></ng-template></mat-tab>
+					<mat-tab [label]="'User Parts' | t"><ng-template matTabContent><lego-user-parts></lego-user-parts></ng-template></mat-tab>
+					<mat-tab [label]="'User Missing Parts' | t"><ng-template matTabContent><lego-user-missing-parts></lego-user-missing-parts></ng-template></mat-tab>
+					<mat-tab [label]="'User Sets' | t"><ng-template matTabContent><lego-user-sets></lego-user-sets></ng-template></mat-tab>
+				</mat-tab-group>
+			</section>
+			</section>
+
+			<section class="nested-tabs" *ngIf="mainView() === 'my-sets'">
+				<lego-user-sets></lego-user-sets>
+			</section>
+
+			<section class="nested-tabs" *ngIf="mainView() === 'missing-parts'">
+				<lego-user-missing-parts></lego-user-missing-parts>
+			</section>
+
+			<button mat-fab type="button" class="mobile-fab" *ngIf="isMobileView()" (click)="setMainView('my-sets')" [attr.aria-label]="('Add Set' | t)">
+				<mat-icon>add</mat-icon>
+			</button>
+
+			<nav class="mobile-bottom-nav" *ngIf="isMobileView()" aria-label="Main">
+				<button type="button" [class.active]="mainView() === 'dashboard'" (click)="setMainView('dashboard')">
+					<mat-icon>home</mat-icon>
+					<span>{{ 'Dashboard' | t }}</span>
+				</button>
+				<button type="button" [class.active]="mainView() === 'my-sets'" (click)="setMainView('my-sets')">
+					<mat-icon>inventory_2</mat-icon>
+					<span>{{ 'My Sets' | t }}</span>
+				</button>
+				<button type="button" [class.active]="mainView() === 'missing-parts'" (click)="setMainView('missing-parts')">
+					<mat-icon>warning_amber</mat-icon>
+					<span>{{ 'Missing Parts' | t }}</span>
+				</button>
+			</nav>
+		</div>
 	</ng-container>
 
 	<ng-template #loginOnly>
+		<div class="content-shell">
 		<section class="landing-hero">
 			<div class="landing-copy">
-				<p class="landing-kicker">LEGO Collection Manager</p>
-				<h1>Track every set, every part, and every build step in one place.</h1>
+				<p class="landing-kicker">{{ 'LEGO Collection Manager' | t }}</p>
+				<h1>{{ 'Track every set, every part, and every build step in one place.' | t }}</h1>
 				<p>
-					This app helps you organize your collection, monitor missing parts, and move from idea to finished model without
-					losing track of what you own.
+					{{ 'This app helps you organize your collection, monitor missing parts, and move from idea to finished model without losing track of what you own.' | t }}
 				</p>
 				<div class="landing-cta-row">
-					<a mat-flat-button class="landing-cta-primary" href="#get-started">Get Started</a>
-					<a mat-stroked-button class="landing-cta-secondary" href="#how-it-works">How It Works</a>
+					<a mat-flat-button class="landing-cta-primary" href="#get-started">{{ 'Get Started' | t }}</a>
+					<a mat-stroked-button class="landing-cta-secondary" href="#how-it-works">{{ 'How It Works' | t }}</a>
 				</div>
 			</div>
 			<div class="landing-highlight-panel">
 				<div class="highlight-card">
 					<mat-icon>inventory_2</mat-icon>
 					<div>
-						<h3>Unified Catalog</h3>
-						<p>Browse sets, parts, colors, themes, and related inventory data from one connected workspace.</p>
+						<h3>{{ 'Unified Catalog' | t }}</h3>
+						<p>{{ 'Browse sets, parts, colors, themes, and related inventory data from one connected workspace.' | t }}</p>
 					</div>
 				</div>
 				<div class="highlight-card">
 					<mat-icon>build</mat-icon>
 					<div>
-						<h3>Build Planning</h3>
-						<p>Save your build intentions, track progress, and focus only on what needs to happen next.</p>
+						<h3>{{ 'Build Planning' | t }}</h3>
+						<p>{{ 'Save your build intentions, track progress, and focus only on what needs to happen next.' | t }}</p>
 					</div>
 				</div>
 				<div class="highlight-card">
 					<mat-icon>warning_amber</mat-icon>
 					<div>
-						<h3>Missing Part Visibility</h3>
-						<p>Quickly identify unavailable pieces and keep your replacement list ready for your next order.</p>
+						<h3>{{ 'Missing Part Visibility' | t }}</h3>
+						<p>{{ 'Quickly identify unavailable pieces and keep your replacement list ready for your next order.' | t }}</p>
 					</div>
 				</div>
 			</div>
 		</section>
 
 		<section class="landing-section" id="how-it-works">
-			<h2>How This Website Works</h2>
+			<h2>{{ 'How This Website Works' | t }}</h2>
 			<div class="steps-grid">
 				<article class="step-card">
 					<span>1</span>
-					<h3>Create Your Account</h3>
-					<p>Register once to get your own personal collection space and synced build actions.</p>
+					<h3>{{ 'Create Your Account' | t }}</h3>
+					<p>{{ 'Register once to get your own personal collection space and synced build actions.' | t }}</p>
 				</article>
 				<article class="step-card">
 					<span>2</span>
-					<h3>Add Sets to Build</h3>
-					<p>Select from the set catalog and track which projects you want to start, pause, or complete.</p>
+					<h3>{{ 'Add Sets to Build' | t }}</h3>
+					<p>{{ 'Select from the set catalog and track which projects you want to start, pause, or complete.' | t }}</p>
 				</article>
 				<article class="step-card">
 					<span>3</span>
-					<h3>Review Part Availability</h3>
-					<p>Compare your owned parts against required inventory and capture exactly what is missing.</p>
+					<h3>{{ 'Review Part Availability' | t }}</h3>
+					<p>{{ 'Compare your owned parts against required inventory and capture exactly what is missing.' | t }}</p>
 				</article>
 				<article class="step-card">
 					<span>4</span>
-					<h3>Build With Confidence</h3>
-					<p>Use your organized data to start builds with fewer surprises and less time searching for pieces.</p>
+					<h3>{{ 'Build With Confidence' | t }}</h3>
+					<p>{{ 'Use your organized data to start builds with fewer surprises and less time searching for pieces.' | t }}</p>
 				</article>
 			</div>
 		</section>
 
 		<section class="landing-section alt">
-			<h2>Why Use It</h2>
+			<h2>{{ 'Why Use It' | t }}</h2>
 			<p class="landing-lead">
-				LEGO collections grow fast. This platform gives you structure, context, and a practical workflow so your collection
-				stays usable instead of overwhelming.
+				{{ 'LEGO collections grow fast. This platform gives you structure, context, and a practical workflow so your collection stays usable instead of overwhelming.' | t }}
 			</p>
 			<div class="why-grid">
 				<article>
 					<mat-icon>insights</mat-icon>
-					<h3>Clarity</h3>
-					<p>Know what you own, what you need, and where each piece belongs in your build journey.</p>
+					<h3>{{ 'Clarity' | t }}</h3>
+					<p>{{ 'Know what you own, what you need, and where each piece belongs in your build journey.' | t }}</p>
 				</article>
 				<article>
 					<mat-icon>bolt</mat-icon>
-					<h3>Speed</h3>
-					<p>Spend less time manually checking inventories and more time actually building.</p>
+					<h3>{{ 'Speed' | t }}</h3>
+					<p>{{ 'Spend less time manually checking inventories and more time actually building.' | t }}</p>
 				</article>
 				<article>
 					<mat-icon>verified</mat-icon>
-					<h3>Reliability</h3>
-					<p>Make decisions from consistent data across sets, parts, and your personal missing list.</p>
+					<h3>{{ 'Reliability' | t }}</h3>
+					<p>{{ 'Make decisions from consistent data across sets, parts, and your personal missing list.' | t }}</p>
 				</article>
 			</div>
 		</section>
 
 		<section class="landing-auth" id="get-started">
 			<div class="landing-auth-copy">
-				<h2>First Time Here?</h2>
-				<p>Register to unlock your own build workspace. Already have an account? Sign in and continue where you left off.</p>
+				<h2>{{ 'First Time Here?' | t }}</h2>
+				<p>{{ 'Register to unlock your own build workspace. Already have an account? Sign in and continue where you left off.' | t }}</p>
 			</div>
 			<div class="auth-gate">
 				<lego-auth-form></lego-auth-form>
 			</div>
 		</section>
+		</div>
 	</ng-template>
 
 	<lego-onboarding-guide></lego-onboarding-guide>

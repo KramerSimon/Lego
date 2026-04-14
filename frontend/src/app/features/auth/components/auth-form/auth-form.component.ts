@@ -7,7 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { AuthService } from '../../../../core/services/auth.service';
-import { OnboardingGuideService } from '../../../../core/services/onboarding-guide.service';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'lego-auth-form',
@@ -19,7 +19,8 @@ import { OnboardingGuideService } from '../../../../core/services/onboarding-gui
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
-    MatIconModule
+    MatIconModule,
+    TranslatePipe
   ],
   templateUrl: './auth-form.component.html',
   styleUrl: './auth-form.component.scss'
@@ -27,7 +28,6 @@ import { OnboardingGuideService } from '../../../../core/services/onboarding-gui
 export class AuthFormComponent {
   private readonly fb = inject(FormBuilder);
   readonly auth = inject(AuthService);
-  private readonly onboardingGuide = inject(OnboardingGuideService);
 
   readonly mode = signal<'login' | 'register'>('login');
   readonly error = signal<string | null>(null);
@@ -52,6 +52,21 @@ export class AuthFormComponent {
     this.mode.set(mode);
     this.error.set(null);
     this.auth.authError.set(null);
+  }
+
+  resendVerificationEmail(): void {
+    const email = this.auth.pendingVerificationEmail();
+    if (!email || this.auth.authenticating()) {
+      return;
+    }
+
+    this.error.set(null);
+    this.auth.authError.set(null);
+    this.auth.resendVerification(email).subscribe((ok) => {
+      if (!ok) {
+        this.error.set(this.auth.authError() ?? 'Unable to resend verification email for this email/username.');
+      }
+    });
   }
 
   submit(): void {
@@ -108,7 +123,7 @@ export class AuthFormComponent {
         return;
       }
 
-      this.onboardingGuide.startMandatoryGuide();
+      this.mode.set('login');
 
       this.registerForm.controls.password.setValue('');
       this.registerForm.controls.confirm_password.setValue('');

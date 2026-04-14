@@ -3,6 +3,7 @@ import { AfterViewInit, Component, HostListener, computed, effect, inject, signa
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { OnboardingGuideService, OnboardingStep } from '../../../core/services/onboarding-guide.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 interface SpotlightRect {
   top: number;
@@ -14,7 +15,7 @@ interface SpotlightRect {
 @Component({
   selector: 'lego-onboarding-guide',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, TranslatePipe],
   templateUrl: './onboarding-guide.component.html',
   styleUrl: './onboarding-guide.component.scss'
 })

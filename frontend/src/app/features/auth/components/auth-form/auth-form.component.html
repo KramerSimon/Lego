@@ -1,21 +1,21 @@
 <mat-card class="auth-card">
   <mat-card-header>
-    <mat-card-title>User Authentication</mat-card-title>
-    <mat-card-subtitle *ngIf="mode() === 'login'">Login with username or email and password.</mat-card-subtitle>
-    <mat-card-subtitle *ngIf="mode() === 'register'">Create a new account to start tracking your LEGO inventory.</mat-card-subtitle>
+    <mat-card-title>{{ 'User Authentication' | t }}</mat-card-title>
+    <mat-card-subtitle *ngIf="mode() === 'login'">{{ 'Login with username or email and password.' | t }}</mat-card-subtitle>
+    <mat-card-subtitle *ngIf="mode() === 'register'">{{ 'Create a new account to start tracking your LEGO inventory.' | t }}</mat-card-subtitle>
   </mat-card-header>
 
   <mat-card-content>
     <div *ngIf="auth.user() as user; else authForms" class="auth-state">
-      <p><strong>Logged in as:</strong> {{ user.username }} (ID: {{ user.user_id }})</p>
+      <p><strong>{{ 'Logged in as:' | t }}</strong> {{ user.username }} (ID: {{ user.user_id }})</p>
       <button mat-stroked-button type="button" (click)="auth.logout()">
         <mat-icon>logout</mat-icon>
-        Logout
+        {{ 'Logout' | t }}
       </button>
     </div>
 
     <ng-template #authForms>
-      <div class="auth-mode-switch" role="group" aria-label="Authentication mode">
+      <div class="auth-mode-switch" role="group" [attr.aria-label]="'Authentication mode' | t">
         <button
           mat-stroked-button
           type="button"
@@ -23,7 +23,7 @@
           (click)="switchMode('login')"
           [disabled]="auth.authenticating()"
         >
-          Login
+          {{ 'Login' | t }}
         </button>
         <button
           mat-stroked-button
@@ -32,86 +32,95 @@
           (click)="switchMode('register')"
           [disabled]="auth.authenticating()"
         >
-          Register
+          {{ 'Register' | t }}
         </button>
       </div>
 
       <form *ngIf="mode() === 'login'" [formGroup]="loginForm" (ngSubmit)="submit()" class="auth-form">
         <mat-form-field appearance="outline">
-          <mat-label>Username or Email</mat-label>
+          <mat-label>{{ 'Username or Email' | t }}</mat-label>
           <input matInput formControlName="identifier" placeholder="simon or simon@example.com" />
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Password</mat-label>
+          <mat-label>{{ 'Password' | t }}</mat-label>
           <input matInput type="password" formControlName="password" />
         </mat-form-field>
 
         <div class="auth-actions">
           <button mat-raised-button color="primary" type="submit" [disabled]="auth.authenticating()">
             <mat-icon>login</mat-icon>
-            Login
+            {{ 'Login' | t }}
           </button>
         </div>
       </form>
 
       <form *ngIf="mode() === 'register'" [formGroup]="registerForm" (ngSubmit)="submit()" class="auth-form register-form">
         <mat-form-field appearance="outline">
-          <mat-label>Username</mat-label>
+          <mat-label>{{ 'Username' | t }}</mat-label>
           <input matInput formControlName="username" placeholder="builder123" />
           <mat-error *ngIf="fieldInvalid('username') && registerForm.controls.username.hasError('required')">
-            Username is required.
+            {{ 'Username is required.' | t }}
           </mat-error>
           <mat-error *ngIf="fieldInvalid('username') && registerForm.controls.username.hasError('minlength')">
-            Username must be at least 3 characters.
+            {{ 'Username must be at least 3 characters.' | t }}
           </mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Email</mat-label>
+          <mat-label>{{ 'Email' | t }}</mat-label>
           <input matInput formControlName="email" placeholder="builder@example.com" />
           <mat-error *ngIf="fieldInvalid('email') && registerForm.controls.email.hasError('required')">
-            Email is required.
+            {{ 'Email is required.' | t }}
           </mat-error>
           <mat-error *ngIf="fieldInvalid('email') && registerForm.controls.email.hasError('email')">
-            Enter a valid email address.
+            {{ 'Enter a valid email address.' | t }}
           </mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="auth-form-span-2">
-          <mat-label>Full name (optional)</mat-label>
+          <mat-label>{{ 'Full name (optional)' | t }}</mat-label>
           <input matInput formControlName="full_name" placeholder="LEGO Builder" />
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Password</mat-label>
+          <mat-label>{{ 'Password' | t }}</mat-label>
           <input matInput type="password" formControlName="password" />
           <mat-error *ngIf="fieldInvalid('password') && registerForm.controls.password.hasError('required')">
-            Password is required.
+            {{ 'Password is required.' | t }}
           </mat-error>
           <mat-error *ngIf="fieldInvalid('password') && registerForm.controls.password.hasError('minlength')">
-            Password must be at least 8 characters.
+            {{ 'Password must be at least 8 characters.' | t }}
           </mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Confirm password</mat-label>
+          <mat-label>{{ 'Confirm password' | t }}</mat-label>
           <input matInput type="password" formControlName="confirm_password" />
           <mat-error *ngIf="fieldInvalid('confirm_password') && registerForm.controls.confirm_password.hasError('required')">
-            Please confirm your password.
+            {{ 'Please confirm your password.' | t }}
           </mat-error>
           <mat-error *ngIf="hasPasswordMismatch()">
-            Passwords do not match.
+            {{ 'Passwords do not match.' | t }}
           </mat-error>
         </mat-form-field>
 
         <div class="auth-actions auth-form-span-2">
           <button mat-raised-button color="primary" type="submit" [disabled]="auth.authenticating()">
             <mat-icon>person_add</mat-icon>
-            Create account
+            {{ 'Create account' | t }}
           </button>
         </div>
       </form>
+
+      <div class="verification-notice" *ngIf="auth.pendingVerificationEmail() as pendingEmail">
+        <p>{{ auth.verificationMessage() || ('Verification email sent. Please check your inbox.' | t) }}</p>
+        <p>{{ 'Pending verification for:' | t }} <strong>{{ pendingEmail }}</strong></p>
+        <button mat-stroked-button type="button" (click)="resendVerificationEmail()" [disabled]="auth.authenticating()">
+          <mat-icon>mail</mat-icon>
+          {{ 'Resend verification email' | t }}
+        </button>
+      </div>
 
       <p *ngIf="error()" class="auth-error">{{ error() }}</p>
     </ng-template>

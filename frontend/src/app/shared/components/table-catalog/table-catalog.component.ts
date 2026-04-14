@@ -10,6 +10,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
 import { TableConfig } from '../../../core/models/table-config';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 export interface TableSortChange {
   column: string | null;
@@ -29,7 +30,8 @@ export interface TableSortChange {
     MatInputModule,
     MatTableModule,
     MatProgressSpinnerModule,
-    MatPaginatorModule
+    MatPaginatorModule,
+    TranslatePipe
   ],
   templateUrl: './table-catalog.component.html',
   styleUrl: './table-catalog.component.scss'

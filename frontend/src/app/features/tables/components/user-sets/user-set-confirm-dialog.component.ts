@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
 export interface UserSetConfirmDialogData {
   setNum: string;
@@ -16,20 +17,20 @@ export interface UserSetConfirmDialogData {
 @Component({
   selector: 'lego-user-set-confirm-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule],
+  imports: [CommonModule, MatDialogModule, MatButtonModule, TranslatePipe],
   template: `
-    <h2 mat-dialog-title>Confirm User Set Save</h2>
+    <h2 mat-dialog-title>{{ 'Confirm User Set Save' | t }}</h2>
     <mat-dialog-content>
-      <p><strong>Set:</strong> {{ data.setNum }} (x{{ data.setQuantity }})</p>
-      <p><strong>Part rows processed:</strong> {{ data.partsProcessed }}</p>
-      <p><strong>User parts rows:</strong> {{ data.userPartsCreated }}</p>
-      <p><strong>Missing parts rows:</strong> {{ data.missingPartsCreated }}</p>
-      <p><strong>Total owned quantity:</strong> {{ data.totalOwnedQuantity }}</p>
-      <p><strong>Total missing quantity:</strong> {{ data.totalMissingQuantity }}</p>
+      <p><strong>{{ 'Set:' | t }}</strong> {{ data.setNum }} (x{{ data.setQuantity }})</p>
+      <p><strong>{{ 'Part rows processed:' | t }}</strong> {{ data.partsProcessed }}</p>
+      <p><strong>{{ 'User parts rows:' | t }}</strong> {{ data.userPartsCreated }}</p>
+      <p><strong>{{ 'Missing parts rows:' | t }}</strong> {{ data.missingPartsCreated }}</p>
+      <p><strong>{{ 'Total owned quantity:' | t }}</strong> {{ data.totalOwnedQuantity }}</p>
+      <p><strong>{{ 'Total missing quantity:' | t }}</strong> {{ data.totalMissingQuantity }}</p>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button type="button" (click)="close(false)">Cancel</button>
-      <button mat-raised-button color="primary" type="button" (click)="close(true)">Confirm Save</button>
+      <button mat-button type="button" (click)="close(false)">{{ 'Cancel' | t }}</button>
+      <button mat-raised-button color="primary" type="button" (click)="close(true)">{{ 'Confirm Save' | t }}</button>
     </mat-dialog-actions>
   `
 })

@@ -11,10 +11,13 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
+    "build": "node --check index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "migrate": "npm run migrate:profile-image && npm run migrate:set-instructions",
+    "migrate": "npm run migrate:profile-image && npm run migrate:set-instructions && npm run migrate:user-sets-public && npm run migrate:email-verification",
     "migrate:profile-image": "node scripts/migrate-add-profile-image-url.js",
     "migrate:set-instructions": "node scripts/migrate-add-set-instructions-table.js",
+    "migrate:user-sets-public": "node scripts/migrate-standardize-user-sets-public.js",
+    "migrate:email-verification": "node scripts/migrate-add-email-verification.js",
     "enrich:instructions": "node scripts/enrich-set-instructions.js",
     "enrich:instructions:set-pages": "node scripts/enrich-set-instructions.js --mode set-page",
     "enrich:instructions:lego": "node scripts/enrich-set-instructions.js --mode lego-search --locale en-us"
@@ -26,6 +29,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "mysql": "^2.18.1",
+    "nodemailer": "^6.10.0",
     "nodemon": "^3.1.14",
     "swagger-ui-express": "^5.0.1"
   }

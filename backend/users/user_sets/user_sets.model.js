@@ -1,6 +1,14 @@
 import database from '../../database.js';
 const tableName = 'user_sets';
 const idColumn = 'user_set_id';
+const CONDITION_TAGS = new Set([
+  'sealed',
+  'like_new',
+  'used_good',
+  'used_fair',
+  'incomplete',
+  'for_parts'
+]);
 
 function normalizeBoolean(value) {
   if (typeof value === 'boolean') {
@@ -108,11 +116,27 @@ function deriveOwnedCompleteFlag(partSelections, multiplier) {
   return totalOwned >= totalRequired ? 1 : 0;
 }
 
+function normalizeConditionTag(value) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  return CONDITION_TAGS.has(normalized) ? normalized : null;
+}
+
+function normalizePublicFlag(value) {
+  return normalizeBoolean(value) ? 1 : 0;
+}
+
 async function getAll(query = {}) {
   try {
     const { page, pageSize, offset } = database.parsePagination(query);
+    const viewerUserId = Number(query.viewer_user_id);
+    const viewerIsAdmin = Number(query.viewer_is_admin ?? 0) > 0;
     const requestedUserId = Number(query.user_id);
     const hasUserFilter = Number.isFinite(requestedUserId) && requestedUserId > 0;
+    const userSetColumns = await database.getTableColumns(tableName);
+    const hasIsPublicColumn = userSetColumns.has('is_public');
     const requestedSortBy = String(query.sortBy ?? '').trim().toLowerCase();
     const requestedSortDir = String(query.sortDir ?? '').trim().toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
@@ -123,6 +147,7 @@ async function getAll(query = {}) {
       set_name: 's.name',
       img_url: 's.img_url',
       quantity: 'us.quantity',
+      is_public: 'us.is_public',
       condition_public: 'us.condition_public',
       purchase_price: 'us.purchase_price',
       owned_since: 'us.owned_since',
@@ -130,22 +155,46 @@ async function getAll(query = {}) {
     };
 
     const sortColumnSql = sortWhitelist[requestedSortBy] ?? 'us.user_set_id';
-    const countSql = hasUserFilter
-      ? `SELECT COUNT(*) AS total FROM ${tableName} WHERE user_id = ?`
-      : `SELECT COUNT(*) AS total FROM ${tableName}`;
+    const whereClauses = [];
+    const whereParams = [];
+
+    if (hasUserFilter) {
+      whereClauses.push('us.user_id = ?');
+      whereParams.push(requestedUserId);
+    }
+
+    if (!viewerIsAdmin) {
+      if (hasIsPublicColumn) {
+        if (hasUserFilter && requestedUserId === viewerUserId) {
+          // Users can always see all of their own sets.
+        } else if (Number.isFinite(viewerUserId) && viewerUserId > 0) {
+          whereClauses.push('(us.is_public = 1 OR us.user_id = ?)');
+          whereParams.push(viewerUserId);
+        } else {
+          whereClauses.push('us.is_public = 1');
+        }
+      } else if (Number.isFinite(viewerUserId) && viewerUserId > 0) {
+        whereClauses.push('us.user_id = ?');
+        whereParams.push(viewerUserId);
+      } else {
+        whereClauses.push('1 = 0');
+      }
+    }
+
+    const whereSql = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const countSql = `SELECT COUNT(*) AS total FROM ${tableName} us ${whereSql}`;
     const dataSql = `
       SELECT us.*, s.name AS set_name, s.img_url
       FROM ${tableName} us
       LEFT JOIN sets s ON s.set_num = us.set_num
-      ${hasUserFilter ? 'WHERE us.user_id = ?' : ''}
+      ${whereSql}
       ORDER BY ${sortColumnSql} ${requestedSortDir}, us.${idColumn} DESC
       LIMIT ? OFFSET ?
     `;
 
-    const countParams = hasUserFilter ? [requestedUserId] : [];
-    const dataParams = hasUserFilter
-      ? [requestedUserId, pageSize, offset]
-      : [pageSize, offset];
+    const countParams = [...whereParams];
+    const dataParams = [...whereParams, pageSize, offset];
 
     const [countRows, dataRows] = await Promise.all([
       database.query(countSql, countParams),
@@ -176,6 +225,30 @@ async function getOwnerUserId(userSetId) {
       return null;
     }
     return ownerId;
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
+async function getAccessInfo(userSetId) {
+  try {
+    const userSetColumns = await database.getTableColumns(tableName);
+    const publicProjection = userSetColumns.has('is_public')
+      ? 'is_public'
+      : '0 AS is_public';
+
+    const sql = `SELECT user_id, ${publicProjection} FROM ${tableName} WHERE ${idColumn} = ? LIMIT 1`;
+    const rows = await database.queryClose(sql, [userSetId]);
+    const row = rows?.[0];
+    const ownerId = Number(row?.user_id);
+    if (!Number.isFinite(ownerId) || ownerId <= 0) {
+      return null;
+    }
+
+    return {
+      ownerId,
+      isPublic: normalizePublicFlag(row?.is_public) === 1
+    };
   } catch (error) {
     return Promise.reject(error);
   }
@@ -360,14 +433,22 @@ async function getItem(id) {
 
 async function add(item) {
   try {
-    const keys = Object.keys(item);
+    const nextItem = { ...item };
+    if (Object.prototype.hasOwnProperty.call(nextItem, 'condition_public')) {
+      nextItem.condition_public = normalizeConditionTag(nextItem.condition_public);
+    }
+    if (Object.prototype.hasOwnProperty.call(nextItem, 'is_public')) {
+      nextItem.is_public = normalizePublicFlag(nextItem.is_public);
+    }
+
+    const keys = Object.keys(nextItem);
     if (keys.length === 0) {
       return Promise.reject(new Error('No fields provided'));
     }
     const placeholders = keys.map(() => '?').join(', ');
     const sql = `INSERT INTO ${tableName} (${keys.join(', ')}) VALUES (${placeholders})`;
-    const values = keys.map(key => item[key]);
-    return database.queryClose(sql, values).then(result => ({ id: result.insertId, ...item }));
+    const values = keys.map(key => nextItem[key]);
+    return database.queryClose(sql, values).then(result => ({ id: result.insertId, ...nextItem }));
   } catch (error) {
     return Promise.reject(error);
   }
@@ -445,13 +526,16 @@ async function addWithParts(payload) {
         userSetInsert.quantity = multiplier;
       }
       if (userSetColumns.has('condition_public')) {
-        userSetInsert.condition_public = userSet.condition_public ?? null;
+        userSetInsert.condition_public = normalizeConditionTag(userSet.condition_public);
       }
       if (userSetColumns.has('condition_complete')) {
         userSetInsert.condition_complete = completenessText;
       }
       if (userSetColumns.has('condition_note')) {
-        userSetInsert.condition_note = userSet.condition_public ?? null;
+        userSetInsert.condition_note = normalizeConditionTag(userSet.condition_public);
+      }
+      if (userSetColumns.has('is_public')) {
+        userSetInsert.is_public = normalizePublicFlag(userSet.is_public);
       }
       if (userSetColumns.has('owned_complete')) {
         userSetInsert.owned_complete = ownedCompleteFlag;
@@ -566,16 +650,24 @@ async function addWithParts(payload) {
 
 async function update(id, item) {
   try {
-    const keys = Object.keys(item);
+    const nextItem = { ...item };
+    if (Object.prototype.hasOwnProperty.call(nextItem, 'condition_public')) {
+      nextItem.condition_public = normalizeConditionTag(nextItem.condition_public);
+    }
+    if (Object.prototype.hasOwnProperty.call(nextItem, 'is_public')) {
+      nextItem.is_public = normalizePublicFlag(nextItem.is_public);
+    }
+
+    const keys = Object.keys(nextItem);
     if (keys.length === 0) {
       return null;
     }
     const assignments = keys.map(key => `${key} = ?`).join(', ');
     const sql = `UPDATE ${tableName} SET ${assignments} WHERE ${idColumn} = ?`;
-    const values = keys.map(key => item[key]);
+    const values = keys.map(key => nextItem[key]);
     return database.queryClose(sql, [...values, id]).then(result => {
       if (result.affectedRows > 0) {
-        return { id, ...item };
+        return { id, ...nextItem };
       }
       return null;
     });
@@ -613,6 +705,7 @@ async function deleteUserSet(id) {
 export default {
   getAll,
   getOwnerUserId,
+  getAccessInfo,
   getItem,
   add,
   addWithParts,

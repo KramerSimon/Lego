@@ -1,17 +1,17 @@
 <mat-card class="catalog-card">
   <mat-card-header>
-    <mat-card-title>{{ config().title }} Catalog</mat-card-title>
-    <mat-card-subtitle>Live view of {{ config().endpoint }}</mat-card-subtitle>
+    <mat-card-title>{{ config().title | t }} {{ 'Catalog' | t }}</mat-card-title>
+    <mat-card-subtitle>{{ 'Live view of' | t }} {{ config().endpoint }}</mat-card-subtitle>
   </mat-card-header>
 
   <mat-card-content>
     <mat-form-field appearance="outline" class="catalog-search">
-      <mat-label>Search all columns (including year)</mat-label>
+      <mat-label>{{ 'Search all columns (including year)' | t }}</mat-label>
       <input
         matInput
         [ngModel]="searchTerm()"
         (ngModelChange)="handleSearchInput($event)"
-        placeholder="Type any value"
+        [placeholder]="'Type any value' | t"
       />
       <mat-icon matSuffix>search</mat-icon>
     </mat-form-field>
@@ -19,7 +19,7 @@
     <div class="search-actions">
       <button mat-button type="button" (click)="clearSort()" [disabled]="!hasActiveSort()">
         <mat-icon>filter_alt_off</mat-icon>
-        Reset Sort
+        {{ 'Reset Sort' | t }}
       </button>
     </div>
 
@@ -32,7 +32,7 @@
         <ng-container *ngFor="let column of displayedColumns()" [matColumnDef]="column">
           <th mat-header-cell *matHeaderCellDef>
             <button type="button" class="sort-toggle" (click)="toggleSort(column)">
-              <span>{{ getColumnLabel(column) }}</span>
+              <span>{{ getColumnLabel(column) | t }}</span>
               <mat-icon>{{ sortIcon(column) }}</mat-icon>
             </button>
           </th>

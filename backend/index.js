@@ -95,6 +95,36 @@ async function ensureSchema() {
     `);
   }
 
+  const emailVerifiedRows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['email_verified']);
+  const hasEmailVerifiedColumn = Array.isArray(emailVerifiedRows) && emailVerifiedRows.length > 0;
+
+  if (!hasEmailVerifiedColumn) {
+    await database.query(`
+      ALTER TABLE users
+      ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0 AFTER is_admin
+    `);
+  }
+
+  const emailVerificationTokenRows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['email_verification_token']);
+  const hasEmailVerificationTokenColumn = Array.isArray(emailVerificationTokenRows) && emailVerificationTokenRows.length > 0;
+
+  if (!hasEmailVerificationTokenColumn) {
+    await database.query(`
+      ALTER TABLE users
+      ADD COLUMN email_verification_token VARCHAR(64) NULL AFTER email_verified
+    `);
+  }
+
+  const emailVerificationExpiresRows = await database.query('SHOW COLUMNS FROM users LIKE ?', ['email_verification_expires_at']);
+  const hasEmailVerificationExpiresColumn = Array.isArray(emailVerificationExpiresRows) && emailVerificationExpiresRows.length > 0;
+
+  if (!hasEmailVerificationExpiresColumn) {
+    await database.query(`
+      ALTER TABLE users
+      ADD COLUMN email_verification_expires_at DATETIME NULL AFTER email_verification_token
+    `);
+  }
+
   await database.query('UPDATE users SET onboarding_guide_required = 0 WHERE onboarding_completed_at IS NOT NULL');
 
   await database.query('UPDATE users SET is_admin = 1 WHERE LOWER(username) = ?', ['simon']);

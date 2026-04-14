@@ -247,7 +247,7 @@ export const USER_SETS_CONFIG: TableConfig = {
   title: 'User Sets',
   endpoint: 'user_sets',
   idField: 'user_set_id',
-  displayedColumns: ['user_set_id', 'user_id', 'set_num', 'quantity', 'condition_public', 'condition_complete', 'purchase_price', 'owned_since'],
+  displayedColumns: ['user_set_id', 'user_id', 'set_num', 'quantity', 'is_public', 'condition_public', 'condition_complete', 'purchase_price', 'owned_since'],
   fields: [
     {
       key: 'user_id',
@@ -277,6 +277,7 @@ export const USER_SETS_CONFIG: TableConfig = {
       }
     },
     { key: 'quantity', label: 'Quantity', type: 'number', required: true },
+    { key: 'is_public', label: 'Publicly Visible', type: 'checkbox' },
     { key: 'condition_public', label: 'Public Condition', type: 'text' },
     { key: 'condition_complete', label: 'Completeness', type: 'text' },
     { key: 'purchase_price', label: 'Purchase Price', type: 'number' },

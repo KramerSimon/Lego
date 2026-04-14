@@ -22,6 +22,24 @@ export interface AuthRegisterPayload {
   password: string;
 }
 
+export interface AuthRegisterResponse {
+  requires_email_verification: boolean;
+  email: string;
+  message: string;
+}
+
+export interface AuthResendVerificationPayload {
+  email?: string;
+  identifier?: string;
+}
+
+export interface AuthResendVerificationResponse {
+  sent?: boolean;
+  already_verified?: boolean;
+  email?: string;
+  message: string;
+}
+
 export interface AuthAccountResponse {
   user: AuthUser;
 }
@@ -89,6 +107,7 @@ export interface UserSetCreatePayload {
   user_id: number;
   set_num: string;
   quantity: number;
+  is_public?: boolean;
   condition_public?: string;
   condition_complete?: string;
   purchase_price?: number;

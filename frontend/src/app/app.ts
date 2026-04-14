@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -30,6 +30,9 @@ import { AccountSettingsDialogComponent } from './features/auth/components/accou
 import { environment } from '../environments/environment';
 import { OnboardingGuideComponent } from './shared/components/onboarding-guide/onboarding-guide.component';
 import { OnboardingGuideService } from './core/services/onboarding-guide.service';
+import { LanguageService } from './core/services/language.service';
+import { SupportedLanguage } from './core/i18n/translations';
+import { TranslatePipe } from './shared/pipes/translate.pipe';
 
 @Component({
   selector: 'lego-root',
@@ -59,32 +62,57 @@ import { OnboardingGuideService } from './core/services/onboarding-guide.service
     UserMissingPartsComponent,
     UserSetsComponent,
     AuthFormComponent,
-    OnboardingGuideComponent
+    OnboardingGuideComponent,
+    TranslatePipe
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App {
-  private static readonly THEME_KEY = 'lego_theme';
+  private static readonly THEME_COOKIE = 'lego_theme';
+  private static readonly THEME_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
   private readonly pickABrickUrl = 'https://www.lego.com/de-de/pick-and-build/pick-a-brick?icmp=PAB_All_Pieces';
 
   protected readonly title = 'Lego Collection Manager';
   protected readonly auth = inject(AuthService);
   protected readonly onboardingGuide = inject(OnboardingGuideService);
+  protected readonly languageService = inject(LanguageService);
   private readonly dialog = inject(MatDialog);
   protected readonly theme = signal<'light' | 'dark'>('light');
+  protected readonly mainView = signal<'dashboard' | 'my-sets' | 'missing-parts'>('dashboard');
+  protected readonly showSetCatalog = signal(false);
+  protected readonly showAdminTables = signal(false);
+  protected readonly isMobileView = signal(false);
+  protected readonly workflowExpanded = signal(true);
+  protected readonly workflowSteps = [1, 2, 3, 4] as const;
+  protected readonly currentWorkflowStep = computed(() => {
+    const view = this.mainView();
+    if (view === 'dashboard') {
+      return 1;
+    }
+    if (view === 'my-sets') {
+      return 2;
+    }
+    return 3;
+  });
+  protected readonly languageOptions: Array<{ code: SupportedLanguage; label: string }> = [
+    { code: 'en', label: 'English' },
+    { code: 'it', label: 'Italian' },
+    { code: 'de', label: 'German' }
+  ];
 
   constructor() {
     const savedTheme = this.readSavedTheme();
     this.theme.set(savedTheme);
     this.applyTheme(savedTheme);
+    this.initializeResponsiveState();
   }
 
   protected toggleTheme(): void {
     const nextTheme = this.theme() === 'dark' ? 'light' : 'dark';
     this.theme.set(nextTheme);
     this.applyTheme(nextTheme);
-    localStorage.setItem(App.THEME_KEY, nextTheme);
+    this.writeThemeCookie(nextTheme);
   }
 
   protected openAccountSettings(): void {
@@ -115,6 +143,73 @@ export class App {
     window.open(this.pickABrickUrl, '_blank', 'noopener');
   }
 
+  protected setMainView(view: 'dashboard' | 'my-sets' | 'missing-parts'): void {
+    this.mainView.set(view);
+  }
+
+  protected openSetCatalog(): void {
+    this.mainView.set('dashboard');
+    this.showSetCatalog.set(true);
+  }
+
+  protected toggleAdminTables(): void {
+    this.showAdminTables.update((current) => !current);
+  }
+
+  protected openAdminTables(): void {
+    this.setMainView('dashboard');
+    this.showAdminTables.set(true);
+  }
+
+  protected goToWorkflowStep(step: number): void {
+    if (step <= 1) {
+      this.setMainView('dashboard');
+      this.showSetCatalog.set(true);
+      return;
+    }
+    if (step === 2) {
+      this.setMainView('my-sets');
+      return;
+    }
+    if (step === 3) {
+      this.setMainView('missing-parts');
+      return;
+    }
+    this.setMainView('missing-parts');
+  }
+
+  protected toggleWorkflowExpanded(): void {
+    this.workflowExpanded.update((current) => !current);
+  }
+
+  protected workflowStepIcon(step: number): string {
+    if (step < this.currentWorkflowStep()) {
+      return 'check_circle';
+    }
+    if (step === this.currentWorkflowStep()) {
+      return 'arrow_forward';
+    }
+    return 'radio_button_unchecked';
+  }
+
+  protected workflowStepClass(step: number): string {
+    if (step < this.currentWorkflowStep()) {
+      return 'done';
+    }
+    if (step === this.currentWorkflowStep()) {
+      return 'current';
+    }
+    return 'todo';
+  }
+
+  protected setLanguage(language: SupportedLanguage): void {
+    this.languageService.setLanguage(language);
+  }
+
+  protected languageCode(): string {
+    return this.languageService.language().toUpperCase();
+  }
+
   protected profileImageUrl(user: AuthUser | null): string | null {
     if (!user) {
       return null;
@@ -133,14 +228,44 @@ export class App {
   }
 
   private readSavedTheme(): 'light' | 'dark' {
-    const saved = String(localStorage.getItem(App.THEME_KEY) ?? '').toLowerCase();
+    const saved = this.readThemeCookie().toLowerCase();
     if (saved === 'dark') {
       return 'dark';
     }
     return 'light';
   }
 
+  private readThemeCookie(): string {
+    const cookieName = `${App.THEME_COOKIE}=`;
+    const cookies = document.cookie ? document.cookie.split(';') : [];
+    for (const rawCookie of cookies) {
+      const cookie = rawCookie.trim();
+      if (!cookie.startsWith(cookieName)) {
+        continue;
+      }
+      return decodeURIComponent(cookie.slice(cookieName.length));
+    }
+    return '';
+  }
+
+  private writeThemeCookie(theme: 'light' | 'dark'): void {
+    document.cookie = `${App.THEME_COOKIE}=${encodeURIComponent(theme)}; path=/; max-age=${App.THEME_COOKIE_MAX_AGE_SECONDS}; samesite=lax`;
+  }
+
   private applyTheme(theme: 'light' | 'dark'): void {
     document.documentElement.setAttribute('data-theme', theme);
+  }
+
+  private initializeResponsiveState(): void {
+    const mediaQuery = window.matchMedia('(max-width: 700px)');
+    const applyState = (matches: boolean): void => {
+      this.isMobileView.set(matches);
+      if (!matches) {
+        this.workflowExpanded.set(true);
+      }
+    };
+
+    applyState(mediaQuery.matches);
+    mediaQuery.addEventListener('change', (event) => applyState(event.matches));
   }
 }

@@ -1,9 +1,22 @@
 
 .filters-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: 1fr;
+  gap: 12px;
   align-items: stretch;
+}
+
+.primary-cta-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.primary-cta-row button {
+  min-height: 44px;
+  border-radius: 999px;
+  font-weight: 700;
 }
 
 .toolbar-group {
@@ -11,6 +24,17 @@
   border-radius: 14px;
   background: var(--lego-card-bg);
   padding: 12px;
+}
+
+:host ::ng-deep .entry-card .mat-mdc-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.header-copy {
+  min-width: 0;
 }
 
 .group-title {
@@ -25,7 +49,7 @@
 .filters-main {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(4, minmax(170px, 1fr));
+  grid-template-columns: repeat(3, minmax(170px, 1fr));
   align-items: center;
 }
 
@@ -76,8 +100,55 @@
   border-top: 1px solid var(--lego-card-border);
 }
 
+.results-count {
+  margin: 0 0 8px;
+  color: var(--lego-ink-soft);
+  font-weight: 600;
+}
+
+.results-count strong {
+  color: var(--lego-form-ink);
+}
+
+.mobile-results {
+  display: none;
+}
+
+.missing-card {
+  border: 1px solid #d7e5eb;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.missing-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.missing-card-top h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--lego-form-ink);
+}
+
+.missing-card-top p {
+  margin: 2px 0 0;
+  color: var(--lego-ink-soft);
+  font-size: 0.86rem;
+}
+
+.missing-card-meta {
+  margin-top: 6px;
+  color: var(--lego-ink-soft);
+  font-size: 0.9rem;
+}
+
 .search-field {
-  grid-column: span 1;
+  grid-column: span 3;
 }
 
 :host ::ng-deep .entry-card .mat-mdc-form-field {
@@ -147,17 +218,33 @@
   flex: 0 0 auto;
 }
 
+.filter-count {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: #0b7285;
+  color: #ffffff;
+  font-size: 0.75rem;
+  align-items: center;
+  justify-content: center;
+}
+
 table.mat-mdc-table {
   width: 100%;
   min-width: 980px;
 }
 
 :host ::ng-deep .missing-parts-table .mat-mdc-row {
-  transition: background-color 180ms ease;
+  transition: background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
 }
 
 :host ::ng-deep .missing-parts-table .mat-mdc-row:hover {
   background: rgba(13, 73, 89, 0.05);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
 }
 
 :host ::ng-deep .missing-parts-table .mat-mdc-header-cell,
@@ -202,6 +289,49 @@ table.mat-mdc-table {
 
 .set-copy {
   line-height: 1.35;
+  font-size: 0.9rem;
+  color: #5f7d89;
+}
+
+.missing-badge {
+  display: inline-flex;
+  min-width: 30px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #eceff1;
+  color: #536671;
+  font-weight: 800;
+  align-items: center;
+  justify-content: center;
+}
+
+.missing-badge.badge-medium {
+  background: #ffe8cc;
+  color: #b35a00;
+}
+
+.missing-badge.badge-high {
+  background: #ffd8d8;
+  color: #b23333;
+}
+
+.empty-state {
+  margin-top: 12px;
+  border: 1px dashed #a9c0ca;
+  border-radius: 12px;
+  padding: 16px;
+  background: #f8fcfe;
+}
+
+.empty-state h3 {
+  margin: 0 0 4px;
+  color: #1d5b6b;
+}
+
+.empty-state p {
+  margin: 0;
+  color: #54717d;
 }
 
 .thumb-empty {
@@ -215,6 +345,30 @@ table.mat-mdc-table {
 
 :host-context([data-theme='dark']) ::ng-deep .missing-parts-table .mat-mdc-row:hover {
   background: var(--lego-table-row-hover);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.28);
+}
+
+:host-context([data-theme='dark']) .results-count {
+  color: #a7c2cb;
+}
+
+:host-context([data-theme='dark']) .results-count strong {
+  color: #d6ebf1;
+}
+
+:host-context([data-theme='dark']) .missing-badge {
+  background: #31424a;
+  color: #c4d7de;
+}
+
+:host-context([data-theme='dark']) .missing-badge.badge-medium {
+  background: #5d4325;
+  color: #ffcd8a;
+}
+
+:host-context([data-theme='dark']) .missing-badge.badge-high {
+  background: #5b2e2e;
+  color: #ffb0b0;
 }
 
 :host-context([data-theme='dark']) .reset-btn {
@@ -222,8 +376,12 @@ table.mat-mdc-table {
 }
 
 @media (max-width: 900px) {
-  .filters-shell {
-    grid-template-columns: 1fr;
+  :host ::ng-deep .entry-card .mat-mdc-card-header {
+    flex-direction: column;
+  }
+
+  .primary-cta-row {
+    margin-left: 0;
   }
 
   .toolbar-group {
@@ -235,7 +393,7 @@ table.mat-mdc-table {
   }
 
   .search-field {
-    grid-column: span 1;
+    grid-column: span 2;
   }
 
   .actions-inline {
@@ -256,6 +414,27 @@ table.mat-mdc-table {
     grid-template-columns: 1fr;
   }
 
+  .search-field {
+    grid-column: span 1;
+  }
+
+  .primary-cta-row button {
+    width: 100%;
+  }
+
+  .mobile-results {
+    display: block;
+  }
+
+  .table-wrap {
+    display: none;
+  }
+
+
+:host-context([data-theme='dark']) .missing-card {
+  background: var(--lego-card-bg);
+  border-color: var(--lego-card-border);
+}
   .action-divider {
     display: none;
   }

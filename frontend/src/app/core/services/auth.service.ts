@@ -1,20 +1,31 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { HttpHeaders } from '@angular/common/http';
 import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, map, of, tap } from 'rxjs';
-import { AuthUser } from './api-types';
-import { AuthApiService } from './auth-api.service';
+import {
+  AuthAccountResponse,
+  AuthLoginResponse,
+  AuthRegisterPayload,
+  AuthRegisterResponse,
+  AuthResendVerificationPayload,
+  AuthResendVerificationResponse,
+  AuthUser
+} from './api-types';
+import { ApiHttpService } from './api-http.service';
 
 const TOKEN_KEY = 'lego_auth_token';
 const USER_KEY = 'lego_auth_user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly api = inject(AuthApiService);
+  private readonly apiHttp = inject(ApiHttpService);
 
   readonly token = signal<string | null>(null);
   readonly user = signal<AuthUser | null>(null);
   readonly authenticating = signal(false);
   readonly authError = signal<string | null>(null);
+  readonly pendingVerificationEmail = signal<string | null>(null);
+  readonly verificationMessage = signal<string | null>(null);
 
   constructor() {
     const savedToken = localStorage.getItem(TOKEN_KEY);
@@ -42,9 +53,39 @@ export class AuthService {
   login(identifier: string, password: string) {
     this.authenticating.set(true);
     this.authError.set(null);
-    return this.api.login(identifier, password).pipe(
+    this.verificationMessage.set(null);
+    return this.loginRequest(identifier, password).pipe(
       tap((response) => {
         this.persistAuth(response.token, response.user);
+        this.pendingVerificationEmail.set(null);
+        this.authenticating.set(false);
+      }),
+      map(() => true),
+      catchError((error: unknown) => {
+        this.authenticating.set(false);
+        const message = this.extractApiError(error);
+        this.authError.set(message);
+        if (message.includes('Email not verified')) {
+          this.pendingVerificationEmail.set(String(identifier ?? '').trim());
+        }
+        return of(false);
+      })
+    );
+  }
+
+  register(username: string, email: string, fullName: string, password: string) {
+    this.authenticating.set(true);
+    this.authError.set(null);
+    this.verificationMessage.set(null);
+    return this.registerRequest({
+      username,
+      email,
+      full_name: fullName,
+      password
+    }).pipe(
+      tap((response) => {
+        this.pendingVerificationEmail.set(response.email);
+        this.verificationMessage.set(response.message);
         this.authenticating.set(false);
       }),
       map(() => true),
@@ -56,17 +97,15 @@ export class AuthService {
     );
   }
 
-  register(username: string, email: string, fullName: string, password: string) {
+  resendVerification(identifierOrEmail: string) {
     this.authenticating.set(true);
     this.authError.set(null);
-    return this.api.register({
-      username,
-      email,
-      full_name: fullName,
-      password
-    }).pipe(
+    return this.resendVerificationRequest({ identifier: identifierOrEmail, email: identifierOrEmail }).pipe(
       tap((response) => {
-        this.persistAuth(response.token, response.user);
+        if (response.email) {
+          this.pendingVerificationEmail.set(response.email);
+        }
+        this.verificationMessage.set(response.message);
         this.authenticating.set(false);
       }),
       map(() => true),
@@ -79,7 +118,7 @@ export class AuthService {
   }
 
   refreshMyAccount() {
-    return this.api.getMyAccount().pipe(
+    return this.getMyAccount().pipe(
       tap((response) => {
         this.setCurrentUser(response.user);
       }),
@@ -88,13 +127,29 @@ export class AuthService {
   }
 
   completeOnboardingGuide() {
-    return this.api.completeOnboardingGuide().pipe(
+    return this.completeOnboardingGuideRequest().pipe(
       tap((response) => {
         this.setCurrentUser(response.user);
       }),
       map(() => true),
       catchError(() => of(false))
     );
+  }
+
+  me(token: string) {
+    return this.apiHttp.get<{ user: AuthUser }>('auth/me', {
+      headers: new HttpHeaders({
+        Authorization: `Bearer ${token}`
+      })
+    });
+  }
+
+  getMyAccount() {
+    return this.apiHttp.get<AuthAccountResponse>('users/me');
+  }
+
+  updateMyAccount(payload: FormData) {
+    return this.apiHttp.put<AuthAccountResponse>('users/me', payload);
   }
 
   setCurrentUser(user: AuthUser): void {
@@ -106,6 +161,8 @@ export class AuthService {
     this.token.set(null);
     this.user.set(null);
     this.authError.set(null);
+    this.pendingVerificationEmail.set(null);
+    this.verificationMessage.set(null);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   }
@@ -115,6 +172,25 @@ export class AuthService {
     this.user.set(user);
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
+
+  private loginRequest(identifier: string, password: string) {
+    return this.apiHttp.post<AuthLoginResponse>('auth/login', {
+      identifier,
+      password
+    });
+  }
+
+  private registerRequest(payload: AuthRegisterPayload) {
+    return this.apiHttp.post<AuthRegisterResponse>('auth/register', payload);
+  }
+
+  private resendVerificationRequest(payload: AuthResendVerificationPayload) {
+    return this.apiHttp.post<AuthResendVerificationResponse>('auth/resend-verification', payload);
+  }
+
+  private completeOnboardingGuideRequest() {
+    return this.apiHttp.post<{ user: AuthUser }>('auth/onboarding/complete', {});
   }
 
   private extractApiError(error: unknown): string {

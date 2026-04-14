@@ -22,6 +22,10 @@ function login(request, response) {
         response.status(401).json({ error: message });
         return;
       }
+      if (message === 'Email not verified. Please verify your email before logging in.') {
+        response.status(403).json({ error: message });
+        return;
+      }
       response.status(500).json({ error: message });
     });
 }
@@ -42,6 +46,57 @@ function register(request, response) {
       }
       if (message === 'Username already exists' || message === 'Email already exists') {
         response.status(409).json({ error: message });
+        return;
+      }
+      if (message.startsWith('Failed to send verification email.')) {
+        response.status(502).json({ error: message });
+        return;
+      }
+      response.status(500).json({ error: message });
+    });
+}
+
+function verifyEmail(request, response) {
+  const token = request.body?.token;
+  authModel.verifyEmailToken(token)
+    .then((result) => {
+      response.json(result);
+    })
+    .catch((error) => {
+      const message = error?.message || 'Email verification failed';
+      if (message === 'Verification token is required') {
+        response.status(400).json({ error: message });
+        return;
+      }
+      if (message === 'Verification link is invalid or expired') {
+        response.status(400).json({ error: message });
+        return;
+      }
+      response.status(500).json({ error: message });
+    });
+}
+
+function verifyEmailFromLink(request, response) {
+  const token = request.query?.token;
+  authModel.verifyEmailToken(token)
+    .then(() => {
+      response.type('html').send('<html><body><h2>Email verified successfully</h2><p>You can return to the app and log in now.</p></body></html>');
+    })
+    .catch(() => {
+      response.status(400).type('html').send('<html><body><h2>Verification failed</h2><p>The verification link is invalid or expired.</p></body></html>');
+    });
+}
+
+function resendVerification(request, response) {
+  const identifier = request.body?.email || request.body?.identifier;
+  authModel.resendVerificationEmail(identifier)
+    .then((result) => {
+      response.json(result);
+    })
+    .catch((error) => {
+      const message = error?.message || 'Unable to resend verification email';
+      if (message === 'Email or username is required' || message === 'User with this email/username was not found') {
+        response.status(400).json({ error: message });
         return;
       }
       response.status(500).json({ error: message });
@@ -98,4 +153,4 @@ function completeOnboarding(request, response) {
     });
 }
 
-export { login, register, me, completeOnboarding };
+export { login, register, me, completeOnboarding, verifyEmail, verifyEmailFromLink, resendVerification };

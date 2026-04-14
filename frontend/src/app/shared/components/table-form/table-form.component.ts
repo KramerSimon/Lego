@@ -11,6 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { TableConfig, TableField } from '../../../core/models/table-config';
 import { SelectLoadMore, SelectOption, SelectSearchChange } from './table-form.models';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 @Component({
   selector: 'lego-table-form',
@@ -25,7 +26,8 @@ import { SelectLoadMore, SelectOption, SelectSearchChange } from './table-form.m
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatSelectModule
+    MatSelectModule,
+    TranslatePipe
   ],
   templateUrl: './table-form.component.html',
   styleUrl: './table-form.component.scss'

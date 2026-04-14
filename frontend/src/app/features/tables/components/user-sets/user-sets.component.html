@@ -1,22 +1,45 @@
 <div class="user-sets-shell">
-	<div class="section-eyebrow">Build Actions</div>
-	<mat-card class="entry-card builder-card">
+	<mat-card class="entry-card focus-card">
 		<mat-card-header>
-			<mat-card-title>Add User Set + Parts</mat-card-title>
-			<mat-card-subtitle>Select owned parts and auto-generate missing list.</mat-card-subtitle>
+			<mat-card-title>{{ 'My Sets' | t }}</mat-card-title>
+			<mat-card-subtitle>{{ 'Start with one action, then open details when needed.' | t }}</mat-card-subtitle>
+		</mat-card-header>
+		<mat-card-content class="focus-actions">
+			<button mat-flat-button type="button" (click)="toggleCreateForm()">
+				<mat-icon>add_box</mat-icon>
+				{{ 'Add Set' | t }}
+			</button>
+			<button mat-stroked-button type="button" (click)="openCatalogSection()">
+				<mat-icon>table_view</mat-icon>
+				{{ 'View My Sets' | t }}
+			</button>
+		</mat-card-content>
+	</mat-card>
+
+	<div class="section-eyebrow" *ngIf="showCreateForm()">{{ 'Build Actions' | t }}</div>
+	<mat-card class="entry-card builder-card" *ngIf="showCreateForm()">
+		<mat-card-header>
+			<mat-card-title>{{ 'Add User Set + Parts' | t }}</mat-card-title>
+			<mat-card-subtitle>{{ 'Select owned parts and auto-generate missing list.' | t }}</mat-card-subtitle>
 		</mat-card-header>
 
 		<mat-card-content>
 			<form [formGroup]="form" class="entry-form" (ngSubmit)="submit()" data-guide-id="user-set-form">
-				<mat-form-field appearance="outline" *ngIf="isAdmin()">
-					<mat-label>User</mat-label>
+				<button type="button" class="mobile-step-toggle" *ngIf="isMobileLayout()" (click)="openMobileStep(1)">
+					<span>{{ '1. Select Set' | t }}</span>
+					<mat-icon>{{ activeMobileStep() === 1 ? 'expand_less' : 'expand_more' }}</mat-icon>
+				</button>
+				<div class="flow-step-label" *ngIf="!isMobileLayout()">{{ '1. Select Set' | t }}</div>
+				<ng-container *ngIf="isStepVisible(1)">
+				<mat-form-field class="user-field-inline" appearance="outline" *ngIf="isAdmin()">
+					<mat-label>{{ 'User' | t }}</mat-label>
 					<mat-select formControlName="user_id" panelClass="lego-select-panel">
 						<mat-option *ngFor="let user of users()" [value]="user.user_id">{{ user.label }}</mat-option>
 					</mat-select>
 				</mat-form-field>
 
-				<mat-form-field appearance="outline">
-					<mat-label>Set</mat-label>
+				<mat-form-field class="set-field" appearance="outline">
+					<mat-label>{{ 'Set' | t }}</mat-label>
 					<input
 						matInput
 						data-guide-id="set-input"
@@ -24,49 +47,79 @@
 						[matAutocomplete]="setAuto"
 						(focus)="handleSetPanelOpened(true)"
 						(input)="handleSetSearchInput($any($event.target).value)"
-						placeholder="Search set number, name, or year"
+						[placeholder]="'Search set number, name, or year' | t"
 					/>
 					<mat-autocomplete #setAuto="matAutocomplete" class="lego-select-panel">
-						<mat-option *ngIf="loadingSetOptions()" disabled>Loading sets...</mat-option>
+						<mat-option *ngIf="loadingSetOptions()" disabled>{{ 'Loading sets...' | t }}</mat-option>
 						<mat-option *ngFor="let set of sets()" [value]="set.set_num">
 							<div class="set-option">
 								<img *ngIf="asImageUrl(set.img_url) as setImg" [src]="setImg" alt="set" class="set-option-thumb" loading="lazy" />
 								<span>{{ set.label }}</span>
 							</div>
 						</mat-option>
-						<mat-option *ngIf="!loadingSetOptions() && sets().length === 0" disabled>No matching sets found</mat-option>
+						<mat-option *ngIf="!loadingSetOptions() && sets().length === 0" disabled>{{ 'No matching sets found' | t }}</mat-option>
 					</mat-autocomplete>
 				</mat-form-field>
+				</ng-container>
 
-				<mat-form-field appearance="outline">
-					<mat-label>Quantity</mat-label>
+				<button type="button" class="mobile-step-toggle" *ngIf="isMobileLayout()" (click)="openMobileStep(2)">
+					<span>{{ '2. Set Quantity' | t }}</span>
+					<mat-icon>{{ activeMobileStep() === 2 ? 'expand_less' : 'expand_more' }}</mat-icon>
+				</button>
+				<div class="flow-step-label" *ngIf="!isMobileLayout()">{{ '2. Set Quantity' | t }}</div>
+				<ng-container *ngIf="isStepVisible(2)">
+				<mat-form-field class="qty-field-inline" appearance="outline">
+					<mat-label>{{ 'Quantity' | t }}</mat-label>
 					<input matInput type="number" formControlName="quantity" data-guide-id="quantity-input" />
 				</mat-form-field>
 
-				<mat-form-field appearance="outline">
-					<mat-label>Public Condition</mat-label>
-					<input matInput type="text" formControlName="condition_public" />
-				</mat-form-field>
+				<div class="advanced-toggle-row">
+					<button mat-button type="button" (click)="toggleAdvancedOptions()">
+						<mat-icon>{{ showAdvancedOptions() ? 'expand_less' : 'tune' }}</mat-icon>
+						{{ showAdvancedOptions() ? ('Less Options' | t) : ('More Options' | t) }}
+					</button>
+				</div>
 
-				<mat-form-field appearance="outline">
-					<mat-label>Purchase Price</mat-label>
-					<input matInput type="number" formControlName="purchase_price" />
-				</mat-form-field>
+				<ng-container *ngIf="showAdvancedOptions()">
+					<mat-form-field appearance="outline">
+						<mat-label>{{ 'Public Condition' | t }}</mat-label>
+						<mat-select formControlName="condition_public" panelClass="lego-select-panel">
+							<mat-option *ngFor="let option of publicConditionOptions" [value]="option.value">
+								{{ option.label | t }}
+							</mat-option>
+						</mat-select>
+					</mat-form-field>
+
+					<mat-checkbox class="public-visibility-toggle" formControlName="is_public">{{ 'Publicly Visible' | t }}</mat-checkbox>
+
+					<mat-form-field appearance="outline">
+						<mat-label>{{ 'Purchase Price' | t }}</mat-label>
+						<input matInput type="number" formControlName="purchase_price" />
+					</mat-form-field>
+				</ng-container>
+				</ng-container>
 			</form>
 
 			<div class="selected-set-preview" *ngIf="selectedSetImageUrl() as selectedSetImage">
 				<img [src]="selectedSetImage" alt="selected set" class="selected-set-thumb" loading="lazy" />
-				<div class="selected-set-copy">Selected set image</div>
+				<div class="selected-set-copy">{{ 'Selected set image' | t }}</div>
 			</div>
 
+			<button type="button" class="mobile-step-toggle" *ngIf="isMobileLayout() && setParts().length > 0" (click)="openMobileStep(3)">
+				<span>{{ '3. Review Parts' | t }}</span>
+				<mat-icon>{{ activeMobileStep() === 3 ? 'expand_less' : 'expand_more' }}</mat-icon>
+			</button>
+			<div class="flow-step-label" *ngIf="!isMobileLayout() && setParts().length > 0">{{ '3. Review Parts' | t }}</div>
+			<ng-container *ngIf="setParts().length > 0 && isStepVisible(3)">
 			<div class="parts-toolbar" *ngIf="setParts().length > 0">
-				<button mat-stroked-button type="button" (click)="toggleAllParts(true)">
+				<div class="quick-actions-label">{{ 'Quick Actions:' | t }}</div>
+				<button mat-flat-button type="button" class="quick-owned" (click)="toggleAllParts(true)">
 					<mat-icon>done_all</mat-icon>
-					Mark All Owned
+					{{ 'Mark All Owned' | t }}
 				</button>
-				<button mat-stroked-button type="button" (click)="toggleAllParts(false)">
+				<button mat-flat-button type="button" class="quick-missing" (click)="toggleAllParts(false)">
 					<mat-icon>remove_done</mat-icon>
-					Mark All Missing
+					{{ 'Mark All Missing' | t }}
 				</button>
 			</div>
 
@@ -78,13 +131,13 @@
 				<div class="part-row" *ngFor="let part of setParts(); let idx = index">
 					<mat-checkbox [checked]="part.has_part" (change)="setHasPart(idx, $event.checked)"></mat-checkbox>
 					<img *ngIf="asImageUrl(part.part_img_url) as partImg" [src]="partImg" alt="part" class="part-thumb" loading="lazy" />
-					<div *ngIf="!asImageUrl(part.part_img_url)" class="part-thumb part-thumb-empty">No image</div>
+					<div *ngIf="!asImageUrl(part.part_img_url)" class="part-thumb part-thumb-empty">{{ 'No image' | t }}</div>
 					<div class="part-meta">
-						<div class="part-title">{{ part.part_num }} - {{ part.part_name || 'Part' }}</div>
-						<div class="part-sub">Color: {{ part.color_name || part.color_id }} | Required total: {{ getRequiredTotal(part) }}</div>
+						<div class="part-title">{{ part.part_num }} - {{ (part.part_name || 'Part') | t }}</div>
+						<div class="part-sub">{{ 'Color:' | t }} {{ part.color_name || part.color_id }} | {{ 'Required total:' | t }} {{ getRequiredTotal(part) }}</div>
 					</div>
 					<mat-form-field class="qty-field" appearance="outline">
-						<mat-label>Owned Qty</mat-label>
+						<mat-label>{{ 'Owned Qty' | t }}</mat-label>
 						<input
 							matInput
 							type="number"
@@ -94,16 +147,33 @@
 							(input)="setOwnedQuantity(idx, $any($event.target).value)"
 						/>
 					</mat-form-field>
-					<div class="missing-cell">Missing: {{ getMissingQuantity(part) }}</div>
+					<div class="missing-cell">{{ 'Missing:' | t }} {{ getMissingQuantity(part) }}</div>
 				</div>
 			</div>
 
 			<div class="preview-summary" *ngIf="setParts().length > 0">
-				<div>Rows to create in user_parts: {{ pendingSummary().userPartsCreated }}</div>
-				<div>Rows to create in user_missing_parts: {{ pendingSummary().missingPartsCreated }}</div>
-				<div>Total owned quantity: {{ pendingSummary().totalOwnedQuantity }}</div>
-				<div>Total missing quantity: {{ pendingSummary().totalMissingQuantity }}</div>
-				<div>Completeness (auto): {{ completenessPreview() }}</div>
+				<div>{{ 'Rows to create in user_parts:' | t }} {{ pendingSummary().userPartsCreated }}</div>
+				<div>{{ 'Rows to create in user_missing_parts:' | t }} {{ pendingSummary().missingPartsCreated }}</div>
+				<div>{{ 'Total owned quantity:' | t }} {{ pendingSummary().totalOwnedQuantity }}</div>
+				<div>{{ 'Total missing quantity:' | t }} {{ pendingSummary().totalMissingQuantity }}</div>
+				<div>{{ 'Completeness (auto):' | t }} {{ completenessPreview() }}</div>
+			</div>
+
+			<div class="completion-delight" *ngIf="setParts().length > 0 && pendingSummary().totalMissingQuantity === 0">
+				<mat-icon>verified</mat-icon>
+				<span>{{ 'All complete - ready to build!' | t }}</span>
+			</div>
+			</ng-container>
+
+			<div class="mobile-sticky-actions" *ngIf="isMobileLayout() && setParts().length > 0">
+				<button mat-flat-button type="button" class="quick-owned" (click)="toggleAllParts(true)">
+					<mat-icon>done_all</mat-icon>
+					{{ 'Mark All Owned' | t }}
+				</button>
+				<button mat-flat-button type="button" class="quick-missing" (click)="toggleAllParts(false)">
+					<mat-icon>remove_done</mat-icon>
+					{{ 'Mark All Missing' | t }}
+				</button>
 			</div>
 
 			<div class="form-actions">
@@ -116,7 +186,7 @@
 					[disabled]="form.invalid || saving() || setParts().length === 0"
 				>
 					<mat-icon>save</mat-icon>
-					Save User Set With Parts
+					{{ 'Save & Check Parts' | t }}
 				</button>
 			</div>
 
@@ -126,13 +196,13 @@
 		</mat-card-content>
 	</mat-card>
 
-	<mat-divider></mat-divider>
+	<mat-divider *ngIf="showCatalogSection()"></mat-divider>
 
-	<div class="section-eyebrow">Catalog Maintenance</div>
-	<mat-card class="entry-card catalog-card">
+	<div class="section-eyebrow" *ngIf="showCatalogSection()">{{ 'Catalog Maintenance' | t }}</div>
+	<mat-card class="entry-card catalog-card" *ngIf="showCatalogSection()">
 		<mat-card-header>
-			<mat-card-title>User Sets Catalog</mat-card-title>
-			<mat-card-subtitle>Expand a row to inspect and maintain available/missing parts.</mat-card-subtitle>
+			<mat-card-title>{{ 'User Sets Catalog' | t }}</mat-card-title>
+			<mat-card-subtitle>{{ 'Expand a row to inspect and maintain available/missing parts.' | t }}</mat-card-subtitle>
 		</mat-card-header>
 
 		<mat-card-content>
@@ -141,13 +211,37 @@
 			</div>
 
 			<div class="catalog-toolbar" *ngIf="!loadingCatalog()">
-				<button mat-button type="button" (click)="clearSort()" [disabled]="!sortColumn()">
-					<mat-icon>filter_alt_off</mat-icon>
-					Reset Sort
+				<button mat-button type="button" (click)="toggleCatalogFilters()">
+					<mat-icon>{{ showCatalogFilters() ? 'expand_less' : 'filter_list' }}</mat-icon>
+					{{ showCatalogFilters() ? ('Hide Filters' | t) : ('Open Filters' | t) }}
+				</button>
+				<button mat-button type="button" (click)="toggleCatalogSection()">
+					<mat-icon>visibility_off</mat-icon>
+					{{ 'Hide Catalog' | t }}
 				</button>
 			</div>
 
-			<div class="table-wrap" *ngIf="!loadingCatalog()">
+			<div class="catalog-toolbar" *ngIf="!loadingCatalog() && showCatalogFilters()">
+				<mat-form-field appearance="outline">
+					<mat-label>{{ 'Filter by User' | t }}</mat-label>
+					<mat-select [value]="catalogUserFilterValue()" (selectionChange)="setCatalogUserFilter($event.value)">
+						<mat-option value="all">{{ 'All users' | t }}</mat-option>
+						<mat-option *ngFor="let user of users()" [value]="catalogUserOptionValue(user.user_id)">{{ user.label }}</mat-option>
+					</mat-select>
+				</mat-form-field>
+
+				<button mat-button type="button" (click)="clearSort()" [disabled]="!sortColumn()">
+					<mat-icon>filter_alt_off</mat-icon>
+					{{ 'Reset Sort' | t }}
+				</button>
+			</div>
+
+			<div class="empty-state" *ngIf="!loadingCatalog() && rows().length === 0">
+				<p>{{ 'No sets added yet.' | t }}</p>
+				<button mat-stroked-button type="button" (click)="openCreateForm()">{{ 'Add Set' | t }}</button>
+			</div>
+
+			<div class="table-wrap" *ngIf="!loadingCatalog() && rows().length > 0">
 				<table mat-table [dataSource]="sortedCatalogRows()" multiTemplateDataRows class="mat-elevation-z2 catalog-table">
 					<ng-container *ngFor="let column of catalogColumns()" [matColumnDef]="column">
 						<th
@@ -157,14 +251,14 @@
 							[class.details-col]="column === 'expand'"
 						>
 							<button type="button" class="sort-toggle" (click)="toggleSort(column)">
-								<span [class.no-wrap]="column === 'user_set_id'">{{ getCatalogColumnLabel(column) }}</span>
+								<span [class.no-wrap]="column === 'user_set_id'">{{ getCatalogColumnLabel(column) | t }}</span>
 								<mat-icon>{{ sortIcon(column) }}</mat-icon>
 							</button>
 						</th>
 						<td
 							mat-cell
 							*matCellDef="let row"
-							[attr.data-label]="getCatalogColumnLabel(column)"
+							[attr.data-label]="(getCatalogColumnLabel(column) | t)"
 							[class.user-set-id-col]="column === 'user_set_id'"
 							[class.details-col]="column === 'expand'"
 						>
@@ -175,7 +269,7 @@
 										type="button"
 										class="expand-icon-btn"
 										(click)="toggleCatalogExpand(row); $event.stopPropagation()"
-										[attr.aria-label]="isCatalogExpanded(row) ? 'Hide parts' : 'Show parts'"
+										[attr.aria-label]="(isCatalogExpanded(row) ? 'Hide parts' : 'Show parts') | t"
 									>
 										<mat-icon>{{ isCatalogExpanded(row) ? 'expand_less' : 'visibility' }}</mat-icon>
 									</button>
@@ -186,7 +280,7 @@
 										(click)="deleteCatalogUserSet(row); $event.stopPropagation()"
 										[disabled]="isDeletingUserSet(row)"
 									>
-										Delete Set
+										{{ 'Delete Set' | t }}
 									</button>
 								</div>
 							</ng-container>
@@ -213,17 +307,17 @@
 								<p class="error" *ngIf="breakdownError() && !breakdownLoading()">{{ breakdownError() }}</p>
 
 								<div *ngIf="expandedBreakdown() as breakdown">
-									<h3>Available Parts</h3>
+									<h3>{{ 'Available Parts' | t }}</h3>
 									<div class="parts-list mini-list" *ngIf="breakdown.available_parts.length > 0; else noAvailableParts">
 										<div class="part-row part-row-edit" *ngFor="let part of breakdown.available_parts">
 											<img *ngIf="asImageUrl(part.part_img_url) as partImg" [src]="partImg" [alt]="part.part_num" class="part-thumb" loading="lazy" />
-											<div *ngIf="!asImageUrl(part.part_img_url)" class="part-thumb part-thumb-empty">No image</div>
+											<div *ngIf="!asImageUrl(part.part_img_url)" class="part-thumb part-thumb-empty">{{ 'No image' | t }}</div>
 											<div class="part-meta">
-												<div class="part-title">{{ part.part_num }} - {{ part.part_name || 'Part' }}</div>
-												<div class="part-sub">Color: {{ part.color_name || part.color_id }}</div>
+												<div class="part-title">{{ part.part_num }} - {{ (part.part_name || 'Part') | t }}</div>
+												<div class="part-sub">{{ 'Color:' | t }} {{ part.color_name || part.color_id }}</div>
 											</div>
 											<mat-form-field class="qty-field" appearance="outline">
-												<mat-label>Qty</mat-label>
+												<mat-label>{{ 'Qty' | t }}</mat-label>
 												<input
 													matInput
 													type="number"
@@ -233,23 +327,23 @@
 												/>
 											</mat-form-field>
 											<div class="row-actions">
-												<button mat-stroked-button type="button" (click)="saveBreakdownQuantity('available', part)" [disabled]="isUpdatingRow('available', part.row_id)">Save</button>
+												<button mat-stroked-button type="button" (click)="saveBreakdownQuantity('available', part)" [disabled]="isUpdatingRow('available', part.row_id)">{{ 'Save' | t }}</button>
 											</div>
 										</div>
 									</div>
-									<ng-template #noAvailableParts><p class="muted">No available part rows linked to this set.</p></ng-template>
+									<ng-template #noAvailableParts><p class="muted">{{ 'No available part rows linked to this set.' | t }}</p></ng-template>
 
-									<h3>Missing Parts</h3>
+									<h3>{{ 'Missing Parts' | t }}</h3>
 									<div class="parts-list mini-list" *ngIf="breakdown.missing_parts.length > 0; else noMissingParts">
 										<div class="part-row part-row-edit" *ngFor="let part of breakdown.missing_parts">
 											<img *ngIf="asImageUrl(part.part_img_url) as partImg" [src]="partImg" [alt]="part.part_num" class="part-thumb" loading="lazy" />
-											<div *ngIf="!asImageUrl(part.part_img_url)" class="part-thumb part-thumb-empty">No image</div>
+											<div *ngIf="!asImageUrl(part.part_img_url)" class="part-thumb part-thumb-empty">{{ 'No image' | t }}</div>
 											<div class="part-meta">
-												<div class="part-title">{{ part.part_num }} - {{ part.part_name || 'Part' }}</div>
-												<div class="part-sub">Color: {{ part.color_name || part.color_id }}</div>
+												<div class="part-title">{{ part.part_num }} - {{ (part.part_name || 'Part') | t }}</div>
+												<div class="part-sub">{{ 'Color:' | t }} {{ part.color_name || part.color_id }}</div>
 											</div>
 											<mat-form-field class="qty-field" appearance="outline">
-												<mat-label>Qty</mat-label>
+												<mat-label>{{ 'Qty' | t }}</mat-label>
 												<input
 													matInput
 													type="number"
@@ -259,11 +353,11 @@
 												/>
 											</mat-form-field>
 											<div class="row-actions">
-												<button mat-stroked-button type="button" (click)="saveBreakdownQuantity('missing', part)" [disabled]="isUpdatingRow('missing', part.row_id)">Save</button>
+												<button mat-stroked-button type="button" (click)="saveBreakdownQuantity('missing', part)" [disabled]="isUpdatingRow('missing', part.row_id)">{{ 'Save' | t }}</button>
 											</div>
 										</div>
 									</div>
-									<ng-template #noMissingParts><p class="muted">No missing part rows linked to this set.</p></ng-template>
+									<ng-template #noMissingParts><p class="muted">{{ 'No missing part rows linked to this set.' | t }}</p></ng-template>
 								</div>
 							</div>
 						</td>
