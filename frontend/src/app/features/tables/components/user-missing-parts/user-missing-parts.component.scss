@@ -1,9 +1,16 @@
 
 .entry-card {
-  border-radius: 14px;
-  border: 0;
+  border-radius: 18px !important;
+  overflow: hidden;
+  border: 1px solid var(--lego-card-border);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
   background: linear-gradient(180deg, color-mix(in srgb, var(--lego-accent) 8%, var(--lego-card-bg)) 0%, var(--lego-card-bg) 100%);
+}
+
+:host ::ng-deep .entry-card .mat-mdc-card-header,
+:host ::ng-deep .entry-card .mat-mdc-card-content {
+  padding-left: 16px;
+  padding-right: 16px;
 }
 
 .filters-shell {
@@ -17,13 +24,31 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  margin-left: auto;
+  margin-left: 0;
+  width: 100%;
+  justify-content: center;
 }
 
-.primary-cta-row button {
+.primary-cta-row .cta-pill {
   min-height: 44px;
   border-radius: 999px;
   font-weight: 700;
+  letter-spacing: 0.01em;
+  border: 1px solid color-mix(in srgb, var(--lego-toolbar-border) 70%, transparent);
+}
+
+.buy-missing-btn {
+  background: linear-gradient(90deg, #1f7a3e 0%, #2c9a4f 100%);
+  color: #ffffff;
+  border-color: color-mix(in srgb, #1f7a3e 60%, var(--lego-toolbar-border));
+}
+
+.export-missing-btn {
+  border-color: color-mix(in srgb, #00bcd4 55%, var(--lego-toolbar-border));
+}
+
+.open-pick-btn {
+  border-color: color-mix(in srgb, var(--lego-toolbar-border) 85%, #cfd8dc);
 }
 
 .toolbar-group {
@@ -35,7 +60,8 @@
 
 :host ::ng-deep .entry-card .mat-mdc-card-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 12px;
 }
@@ -127,6 +153,7 @@
   background: var(--lego-card-bg);
   padding: 10px;
   margin-bottom: 8px;
+  transition: transform 170ms ease, box-shadow 170ms ease;
 }
 
 .missing-card-top {
@@ -357,6 +384,20 @@ table.mat-mdc-table {
 
 :host-context([data-theme='dark']) .results-count {
   color: #a7c2cb;
+}
+
+@media (max-width: 700px) {
+  .filters-group {
+    position: sticky;
+    top: 8px;
+    z-index: 12;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+  }
+
+  .missing-card:active {
+    transform: scale(0.985);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+  }
 }
 
 :host-context([data-theme='dark']) .results-count strong {

@@ -1,0 +1,301 @@
+.build-mode-wrap {
+  display: grid;
+  gap: 16px;
+}
+
+.completion-flash {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: #176c2b;
+  background: color-mix(in srgb, #2e7d32 14%, var(--lego-card-bg));
+  border: 1px solid color-mix(in srgb, #2e7d32 36%, var(--lego-card-border));
+  animation: pop-in 220ms ease;
+}
+
+.hero-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 20px 22px !important;
+  border: 1px solid color-mix(in srgb, var(--lego-accent) 30%, var(--lego-card-border));
+  background: var(--lego-card-bg);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.1);
+}
+
+.hero-action-btn {
+  min-height: 44px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--lego-btn-stroked-border) !important;
+  color: var(--lego-btn-stroked-fg) !important;
+  --mdc-outlined-button-outline-color: var(--lego-btn-stroked-border);
+  --mdc-outlined-button-label-text-color: var(--lego-btn-stroked-fg);
+}
+
+:host ::ng-deep .hero-action-btn .mdc-button__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+:host ::ng-deep .hero-action-btn[disabled] {
+  border-color: var(--lego-btn-stroked-border) !important;
+  color: color-mix(in srgb, var(--lego-btn-stroked-fg) 70%, transparent) !important;
+  opacity: 0.75;
+}
+
+.hero-copy h2 {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.2vw, 1.65rem);
+  line-height: 1.2;
+}
+
+.hero-copy p {
+  margin: 6px 0 0;
+  color: var(--lego-ink-soft);
+  line-height: 1.45;
+}
+
+.continue-copy {
+  font-weight: 700;
+}
+
+.build-layout {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(250px, 340px) minmax(0, 1fr);
+}
+
+.sets-card,
+.progress-card {
+  border-radius: 14px;
+  border: 1px solid var(--lego-card-border);
+  background: var(--lego-card-bg);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+  padding: 18px 20px !important;
+}
+
+.sets-card {
+  background: color-mix(in srgb, var(--lego-card-bg) 95%, var(--lego-surface-muted));
+}
+
+.progress-card {
+  border-color: color-mix(in srgb, var(--lego-accent) 22%, var(--lego-card-border));
+}
+
+.progress-summary {
+  position: sticky;
+  top: 8px;
+  z-index: 3;
+  background: var(--lego-card-bg);
+  border: 1px solid color-mix(in srgb, var(--lego-card-border) 86%, transparent);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.set-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 8px;
+}
+
+.set-item {
+  border: 1px solid var(--lego-card-border);
+  background: var(--lego-card-bg);
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  padding: 9px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--lego-form-ink);
+}
+
+.set-item.active {
+  border-color: var(--lego-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--lego-accent) 45%, transparent);
+}
+
+.set-item:hover {
+  border-color: color-mix(in srgb, var(--lego-accent) 38%, var(--lego-card-border));
+  background: color-mix(in srgb, var(--lego-accent) 6%, var(--lego-card-bg));
+}
+
+.set-item img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.set-item span {
+  color: var(--lego-form-ink);
+  font-weight: 600;
+}
+
+.set-item strong {
+  color: var(--lego-form-ink);
+}
+
+.stats-row {
+  margin: 10px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stats-row strong {
+  font-size: 1.02rem;
+}
+
+.parts-steps {
+  margin-top: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.step-group {
+  border: 1px solid var(--lego-card-border);
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.step-group header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  line-height: 1.35;
+}
+
+.step-header {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.step-header .mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  color: var(--lego-ink-soft);
+}
+
+.step-body {
+  display: grid;
+  gap: 10px;
+}
+
+.step-parts-list {
+  max-height: 640px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.part-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  border-top: 1px dashed var(--lego-card-border);
+  padding-top: 10px;
+  padding-bottom: 2px;
+}
+
+.part-cell {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.part-cell img {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.part-cell strong {
+  display: block;
+  line-height: 1.3;
+  font-size: 0.98rem;
+  color: var(--lego-form-ink);
+}
+
+.part-cell small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.82rem;
+  color: var(--lego-ink-soft);
+}
+
+.done-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.required {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--lego-accent);
+}
+
+:host ::ng-deep .progress-card .mat-mdc-progress-bar,
+:host ::ng-deep .step-group .mat-mdc-progress-bar {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+:host ::ng-deep .progress-card .mdc-linear-progress__buffer,
+:host ::ng-deep .step-group .mdc-linear-progress__buffer {
+  background: color-mix(in srgb, var(--lego-accent) 18%, var(--lego-card-bg));
+}
+
+.loading,
+.empty {
+  padding: 10px 0;
+}
+
+@media (max-width: 960px) {
+  .build-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .part-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

@@ -1,0 +1,95 @@
+<section class="build-mode-wrap">
+  <div class="completion-flash" *ngIf="showCompletionFlash()">
+    <mat-icon>celebration</mat-icon>
+    <strong>{{ 'Set completed!' | t }}</strong>
+  </div>
+
+  <mat-card class="hero-card">
+    <div class="hero-copy">
+      <h2>{{ 'Build Mode' | t }}</h2>
+      <p>{{ 'Start a guided build and mark each required part as completed.' | t }}</p>
+      <p *ngIf="continueBuild() as state" class="continue-copy">
+        {{ 'Continue' | t }}: {{ state.set_num }} - {{ state.completion }}%
+      </p>
+    </div>
+    <button mat-stroked-button type="button" class="hero-action-btn" (click)="resetProgress()" [disabled]="!selectedSet()">
+      <mat-icon>replay</mat-icon>
+      {{ 'Reset Progress' | t }}
+    </button>
+  </mat-card>
+
+  <div class="build-layout">
+    <mat-card class="sets-card">
+      <h3>{{ 'Ready to build' | t }}</h3>
+      <div class="loading" *ngIf="loadingSets()">
+        <mat-spinner diameter="30"></mat-spinner>
+      </div>
+      <div class="set-list" *ngIf="!loadingSets()">
+        <button
+          type="button"
+          class="set-item"
+          *ngFor="let row of buildableSets()"
+          [class.active]="selectedSet()?.set_num === row.set_num"
+          (click)="selectSet(row)"
+        >
+          <img *ngIf="asImageUrl(row.img_url) as img" [src]="img" [alt]="setLabel(row)" />
+          <span>{{ setLabel(row) }}</span>
+          <strong>{{ row.completeness_percentage }}%</strong>
+        </button>
+        <p *ngIf="buildableSets().length === 0" class="empty">{{ 'No buildable sets yet.' | t }}</p>
+      </div>
+    </mat-card>
+
+    <mat-card class="progress-card" *ngIf="selectedSet() as selected">
+      <div class="progress-summary">
+      <h3>{{ setLabel(selected) }}</h3>
+      <p>{{ suggestion() | t }}</p>
+      <div class="stats-row">
+        <span>{{ completedPieces() }}/{{ totalRequiredPieces() }} {{ 'pieces completed' | t }}</span>
+        <strong>{{ completionPercent() }}%</strong>
+      </div>
+      <mat-progress-bar mode="determinate" [value]="completionPercent()"></mat-progress-bar>
+      </div>
+
+      <div class="loading" *ngIf="loadingParts()">
+        <mat-spinner diameter="34"></mat-spinner>
+      </div>
+
+      <div class="parts-steps" *ngIf="!loadingParts()">
+        <section class="step-group" *ngFor="let group of stepGroups()">
+          <button type="button" class="step-header" (click)="toggleStep(group.id)">
+            <strong>{{ group.title | t }}</strong>
+            <span>{{ stepCompletedPieces(group) }}/{{ stepRequiredPieces(group) }} · {{ stepPercent(group) }}%</span>
+            <mat-icon>{{ isStepExpanded(group.id) ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+
+          <div class="step-body" *ngIf="isStepExpanded(group.id)">
+            <mat-progress-bar mode="determinate" [value]="stepPercent(group)"></mat-progress-bar>
+
+            <div class="step-parts-list">
+              <article class="part-row" *ngFor="let part of group.parts">
+                <div class="part-cell">
+                  <img *ngIf="asImageUrl(part.part_img_url) as partImg" [src]="partImg" [alt]="part.part_name || part.part_num" />
+                  <div>
+                    <strong>{{ part.part_name || part.part_num }}</strong>
+                    <small>#{{ part.part_num }} · {{ part.color_name || ('Color ' + part.color_id) }}</small>
+                  </div>
+                </div>
+                <div class="done-control">
+                  <span class="required">{{ requiredQuantity(part) }}</span>
+                  <button mat-icon-button type="button" (click)="incrementDone(part, -1)">
+                    <mat-icon>remove</mat-icon>
+                  </button>
+                  <span>{{ doneByKey()[partKey(part)] || 0 }}</span>
+                  <button mat-icon-button type="button" (click)="incrementDone(part, 1)">
+                    <mat-icon>add</mat-icon>
+                  </button>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+      </div>
+    </mat-card>
+  </div>
+</section>

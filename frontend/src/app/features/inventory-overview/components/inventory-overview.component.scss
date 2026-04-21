@@ -1,0 +1,122 @@
+.inventory-overview-wrap {
+  display: grid;
+  gap: 12px;
+}
+
+.overview-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 18px 20px !important;
+  border: 1px solid var(--lego-card-border);
+  background: var(--lego-card-bg);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.hero-action-btn {
+  min-height: 44px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--lego-btn-stroked-border) !important;
+  color: var(--lego-btn-stroked-fg) !important;
+  --mdc-outlined-button-outline-color: var(--lego-btn-stroked-border);
+  --mdc-outlined-button-label-text-color: var(--lego-btn-stroked-fg);
+}
+
+:host ::ng-deep .hero-action-btn .mdc-button__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+:host ::ng-deep .hero-action-btn[disabled] {
+  border-color: var(--lego-btn-stroked-border) !important;
+  color: color-mix(in srgb, var(--lego-btn-stroked-fg) 70%, transparent) !important;
+  opacity: 0.75;
+}
+
+.overview-hero h2 {
+  margin: 0;
+}
+
+.overview-hero p {
+  margin: 4px 0 0;
+  color: var(--lego-ink-soft);
+}
+
+.stats-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.stats-grid mat-card {
+  border-radius: 12px;
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  border: 1px solid var(--lego-card-border);
+  background: var(--lego-card-bg);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  padding: 14px 16px !important;
+}
+
+.stats-grid strong {
+  font-size: 1.5rem;
+}
+
+.lists-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.lists-grid mat-card {
+  border-radius: 12px;
+  border: 1px solid var(--lego-card-border);
+  background: var(--lego-card-bg);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  padding: 14px 16px !important;
+}
+
+.lists-grid h3 {
+  margin-top: 0;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--lego-card-border);
+  padding-bottom: 6px;
+}
+
+li small {
+  display: block;
+  color: var(--lego-ink-soft);
+}
+
+.loading,
+.empty {
+  padding: 10px 0;
+}
+
+@media (max-width: 900px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lists-grid {
+    grid-template-columns: 1fr;
+  }
+}

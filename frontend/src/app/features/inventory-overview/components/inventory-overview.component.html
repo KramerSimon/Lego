@@ -1,0 +1,65 @@
+<section class="inventory-overview-wrap">
+  <mat-card class="overview-hero">
+    <div>
+      <h2>{{ 'My Parts Overview' | t }}</h2>
+      <p>{{ 'See total parts, common pieces, and rare stock in one snapshot.' | t }}</p>
+    </div>
+    <button mat-stroked-button type="button" class="hero-action-btn" (click)="reload()" [disabled]="loading()">
+      <mat-icon>refresh</mat-icon>
+      {{ 'Refresh' | t }}
+    </button>
+  </mat-card>
+
+  <div class="loading" *ngIf="loading()">
+    <mat-spinner diameter="36"></mat-spinner>
+  </div>
+
+  <div class="stats-grid" *ngIf="!loading()">
+    <mat-card>
+      <strong>{{ totalPieces() }}</strong>
+      <span>{{ 'Total pieces owned' | t }}</span>
+    </mat-card>
+    <mat-card>
+      <strong>{{ uniqueParts() }}</strong>
+      <span>{{ 'Unique part numbers' | t }}</span>
+    </mat-card>
+    <mat-card>
+      <strong>{{ totalLots() }}</strong>
+      <span>{{ 'Total inventory lots' | t }}</span>
+    </mat-card>
+    <mat-card>
+      <strong>{{ rareLots() }}</strong>
+      <span>{{ 'Rare lots (<=2 pieces)' | t }}</span>
+    </mat-card>
+  </div>
+
+  <div class="lists-grid" *ngIf="!loading()">
+    <mat-card>
+      <h3>{{ 'Most Common Parts' | t }}</h3>
+      <ul>
+        <li *ngFor="let item of topParts()">
+          <div>
+            <strong>{{ item.partName }}</strong>
+            <small>#{{ item.partNum }}</small>
+          </div>
+          <span>{{ item.totalQuantity }}</span>
+        </li>
+      </ul>
+      <p *ngIf="topParts().length === 0" class="empty">{{ 'No part data yet.' | t }}</p>
+    </mat-card>
+
+    <mat-card>
+      <h3>{{ 'Rare Parts' | t }}</h3>
+      <ul>
+        <li *ngFor="let item of rarePartHighlights()">
+          <div>
+            <strong>{{ item.partName }}</strong>
+            <small>#{{ item.partNum }}</small>
+          </div>
+          <span>{{ item.totalQuantity }}</span>
+        </li>
+      </ul>
+      <p *ngIf="rarePartHighlights().length === 0" class="empty">{{ 'No rare part rows found.' | t }}</p>
+    </mat-card>
+  </div>
+</section>

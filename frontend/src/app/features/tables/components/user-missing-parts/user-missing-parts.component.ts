@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -19,6 +19,7 @@ import { UserMissingPartsApiService } from '../../../../core/services/user-missi
 import { SetsTableApiService, ThemesApiService, UsersApiService } from '../../../../core/services/tables/table-services.service';
 import { debounceTime, firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { GlobalSearchService } from '../../../../core/services/global-search.service';
 
 @Component({
   selector: 'lego-user-missing-parts',
@@ -49,20 +50,24 @@ export class UserMissingPartsComponent implements OnInit {
   private readonly themesApi = inject(ThemesApiService);
   private readonly setsApi = inject(SetsTableApiService);
   private readonly userMissingPartsApi = inject(UserMissingPartsApiService);
+  private readonly globalSearch = inject(GlobalSearchService);
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
   private setSearchTimer: ReturnType<typeof setTimeout> | null = null;
+  private processedSearchTimestamp = 0;
+  private filterOptionsLoaded = false;
 
   readonly loading = signal(false);
   readonly exporting = signal(false);
   readonly loadingSetOptions = signal(false);
   readonly showFilters = signal(false);
   readonly showDetails = signal(false);
+  readonly showAdvancedOptions = signal(false);
   readonly rows = signal<Record<string, unknown>[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
-  readonly pageSize = signal(25);
+  readonly pageSize = signal(15);
   readonly pageSizeOptions = [10, 25, 50, 100, 200];
   readonly sortColumn = signal<string | null>(null);
   readonly sortDirection = signal<'asc' | 'desc'>('asc');
@@ -130,19 +135,37 @@ export class UserMissingPartsComponent implements OnInit {
         this.reload();
       });
 
-    this.loadFilterOptions();
     this.reload();
+
+    effect(() => {
+      const request = this.globalSearch.request();
+      if (!request || request.timestamp <= this.processedSearchTimestamp) {
+        return;
+      }
+      if (request.scope !== 'all' && request.scope !== 'missing-parts') {
+        return;
+      }
+
+      this.processedSearchTimestamp = request.timestamp;
+      this.filters.controls.search.setValue(request.query, { emitEvent: false });
+      this.page.set(1);
+      this.reload();
+    });
   }
 
   handleSetPanelOpened(opened: boolean): void {
     if (opened) {
+      this.ensureFilterOptionsLoaded();
       this.setSearchTerm.set('');
-      this.searchSetOptions('', true);
+      if (this.sets().length === 0 && !this.loadingSetOptions()) {
+        this.searchSetOptions('', true);
+      }
     }
   }
 
   handleThemePanelOpened(opened: boolean): void {
     if (opened) {
+      this.ensureFilterOptionsLoaded();
       this.themeSearchTerm.set('');
     }
   }
@@ -233,7 +256,15 @@ export class UserMissingPartsComponent implements OnInit {
   }
 
   toggleFilters(): void {
-    this.showFilters.update((current) => !current);
+    const next = !this.showFilters();
+    this.showFilters.set(next);
+    if (next) {
+      this.ensureFilterOptionsLoaded();
+    }
+  }
+
+  toggleAdvancedOptions(): void {
+    this.showAdvancedOptions.update((current) => !current);
   }
 
   toggleDetails(): void {
@@ -313,6 +344,33 @@ export class UserMissingPartsComponent implements OnInit {
     }
   }
 
+  async buyAllMissingParts(): Promise<void> {
+    if (this.exporting()) {
+      return;
+    }
+
+    this.exporting.set(true);
+    try {
+      const rows = await this.fetchAllFilteredRows();
+      const brickLinkItems = this.buildBrickLinkWantedItems(rows);
+      if (brickLinkItems.length === 0) {
+        this.snackBar.open('No missing parts found for current filters.', 'Close', { duration: 2400 });
+        return;
+      }
+
+      const brickLinkXml = this.buildBrickLinkWantedXml(brickLinkItems);
+      const plainList = this.buildBrickLinkWantedList(brickLinkItems);
+      this.downloadTextFile(this.buildExportFileName('xml'), brickLinkXml, 'application/xml;charset=utf-8');
+      await this.copyToClipboard(plainList);
+      window.open('https://www.bricklink.com/v2/wanted/upload.page', '_blank', 'noopener');
+      this.snackBar.open('BrickLink XML downloaded and list copied. Opened BrickLink upload page.', 'Close', { duration: 4000 });
+    } catch {
+      this.snackBar.open('Failed to prepare BrickLink purchase list.', 'Close', { duration: 2800 });
+    } finally {
+      this.exporting.set(false);
+    }
+  }
+
   openPickABrick(): void {
     window.open(this.pickABrickUrl, '_blank', 'noopener');
   }
@@ -385,6 +443,14 @@ export class UserMissingPartsComponent implements OnInit {
     });
 
     this.searchSetOptions('', true);
+  }
+
+  private ensureFilterOptionsLoaded(): void {
+    if (this.filterOptionsLoaded) {
+      return;
+    }
+    this.filterOptionsLoaded = true;
+    this.loadFilterOptions();
   }
 
   private searchSetOptions(searchValue: string, reset: boolean): void {
@@ -571,7 +637,7 @@ export class UserMissingPartsComponent implements OnInit {
     return filters;
   }
 
-  private buildExportFileName(extension: 'csv' | 'json'): string {
+  private buildExportFileName(extension: 'csv' | 'json' | 'xml'): string {
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
     return `missing-parts-summary-${stamp}.${extension}`;
   }
@@ -582,6 +648,83 @@ export class UserMissingPartsComponent implements OnInit {
       return direct;
     }
     return '';
+  }
+
+  private buildBrickLinkWantedItems(rows: Record<string, unknown>[]): Array<{ partNum: string; colorId: number; quantity: number }> {
+    const aggregate = new Map<string, { partNum: string; colorId: number; quantity: number }>();
+
+    for (const row of rows) {
+      const partNum = String(row['part_num'] ?? '').trim();
+      const colorId = Number(row['color_id'] ?? 0);
+      const quantity = Number(row['quantity_missing'] ?? 0);
+      const safeQuantity = Number.isFinite(quantity) ? Math.max(0, Math.round(quantity)) : 0;
+      if (!partNum || !Number.isFinite(colorId) || colorId <= 0 || safeQuantity <= 0) {
+        continue;
+      }
+
+      const key = `${partNum}:${colorId}`;
+      const current = aggregate.get(key);
+      if (current) {
+        current.quantity += safeQuantity;
+        continue;
+      }
+
+      aggregate.set(key, { partNum, colorId, quantity: safeQuantity });
+    }
+
+    return Array.from(aggregate.values()).sort((a, b) => {
+      return a.partNum.localeCompare(b.partNum, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }
+
+  private buildBrickLinkWantedList(items: Array<{ partNum: string; colorId: number; quantity: number }>): string {
+    const lines = ['Part,Color,Qty'];
+    for (const item of items) {
+      lines.push(`${item.partNum},${item.colorId},${item.quantity}`);
+    }
+
+    return lines.join('\n');
+  }
+
+  private buildBrickLinkWantedXml(items: Array<{ partNum: string; colorId: number; quantity: number }>): string {
+    const lines = ['<INVENTORY>'];
+    for (const item of items) {
+      lines.push('  <ITEM>');
+      lines.push('    <ITEMTYPE>P</ITEMTYPE>');
+      lines.push(`    <ITEMID>${this.escapeXml(item.partNum)}</ITEMID>`);
+      lines.push(`    <COLOR>${item.colorId}</COLOR>`);
+      lines.push(`    <MINQTY>${item.quantity}</MINQTY>`);
+      lines.push('  </ITEM>');
+    }
+    lines.push('</INVENTORY>');
+    return lines.join('\n');
+  }
+
+  private escapeXml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  private async copyToClipboard(content: string): Promise<void> {
+    if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      await navigator.clipboard.writeText(content);
+      return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = content;
+    textarea.setAttribute('readonly', 'true');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
   }
 
   private downloadTextFile(fileName: string, content: string, mimeType: string): void {

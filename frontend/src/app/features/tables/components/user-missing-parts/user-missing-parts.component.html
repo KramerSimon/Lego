@@ -9,13 +9,25 @@
 				mat-flat-button
 				color="primary"
 				type="button"
+				class="buy-missing-btn cta-pill"
+				(click)="buyAllMissingParts()"
+				[disabled]="exporting() || total() === 0"
+			>
+				<mat-icon>shopping_cart_checkout</mat-icon>
+				{{ 'Buy All Missing Parts' | t }}
+			</button>
+			<button
+				mat-flat-button
+				color="primary"
+				type="button"
+				class="export-missing-btn cta-pill"
 				[matMenuTriggerFor]="exportMenu"
 				[disabled]="exporting() || total() === 0"
 			>
 				<mat-icon>download</mat-icon>
 				{{ 'Export Missing Parts' | t }}
 			</button>
-			<button mat-stroked-button type="button" (click)="openPickABrick()">
+			<button mat-stroked-button type="button" class="open-pick-btn cta-pill" (click)="openPickABrick()">
 				<mat-icon>open_in_new</mat-icon>
 				{{ 'Open Pick a Brick' | t }}
 			</button>
@@ -39,20 +51,27 @@
 						<span class="filter-count" *ngIf="activeFilterCount() > 0">{{ activeFilterCount() }}</span>
 					</button>
 
-					<button mat-button type="button" (click)="toggleDetails()">
-						<mat-icon>{{ showDetails() ? 'visibility_off' : 'visibility' }}</mat-icon>
-						{{ showDetails() ? ('Less Details' | t) : ('More Details' | t) }}
+					<button mat-button type="button" (click)="toggleAdvancedOptions()">
+						<mat-icon>{{ showAdvancedOptions() ? 'expand_less' : 'tune' }}</mat-icon>
+						{{ showAdvancedOptions() ? ('Hide Options' | t) : ('More Options' | t) }}
 					</button>
 
-					<button mat-button type="button" class="reset-btn" (click)="resetFilters()">
-						<mat-icon>restart_alt</mat-icon>
-						{{ 'Reset Filters' | t }}
-					</button>
+					<ng-container *ngIf="showAdvancedOptions()">
+						<button mat-button type="button" (click)="toggleDetails()">
+							<mat-icon>{{ showDetails() ? 'visibility_off' : 'visibility' }}</mat-icon>
+							{{ showDetails() ? ('Less Details' | t) : ('More Details' | t) }}
+						</button>
 
-					<button mat-button type="button" class="reset-btn" (click)="clearSort()" [disabled]="!sortColumn()">
-						<mat-icon>filter_alt_off</mat-icon>
-						{{ 'Reset Sort' | t }}
-					</button>
+						<button mat-button type="button" class="reset-btn" (click)="resetFilters()">
+							<mat-icon>restart_alt</mat-icon>
+							{{ 'Reset Filters' | t }}
+						</button>
+
+						<button mat-button type="button" class="reset-btn" (click)="clearSort()" [disabled]="!sortColumn()">
+							<mat-icon>filter_alt_off</mat-icon>
+							{{ 'Reset Sort' | t }}
+						</button>
+					</ng-container>
 
 					<ng-container *ngIf="showFilters()">
 					<mat-form-field appearance="outline">

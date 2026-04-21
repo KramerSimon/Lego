@@ -73,64 +73,176 @@
 						<p>{{ 'Plan builds, track missing pieces, and browse your LEGO catalog in one place.' | t }}</p>
 					</div>
 				</div>
+				<div class="global-search-shell" *ngIf="mainView() === 'dashboard' && !showSetCatalog()">
+					<mat-form-field appearance="outline" class="global-search-input">
+						<mat-label>{{ 'Global Search' | t }}</mat-label>
+						<mat-icon matPrefix>travel_explore</mat-icon>
+						<input
+							matInput
+							[ngModel]="globalSearchQuery()"
+							(ngModelChange)="globalSearchQuery.set($event)"
+							(keyup.enter)="runGlobalSearch()"
+							[placeholder]="'Search sets, parts, and missing items...' | t"
+						/>
+					</mat-form-field>
+					<mat-form-field appearance="outline" class="global-search-scope">
+						<mat-label>{{ 'In' | t }}</mat-label>
+						<mat-select [value]="globalSearchScope()" (valueChange)="globalSearchScope.set($event)">
+							<mat-option *ngFor="let option of globalSearchScopes" [value]="option.value">{{ option.label | t }}</mat-option>
+						</mat-select>
+					</mat-form-field>
+					<button mat-flat-button type="button" class="global-search-btn" (click)="runGlobalSearch()">
+						<mat-icon>search</mat-icon>
+						{{ 'Search' | t }}
+					</button>
+				</div>
 			</section>
 
 			<nav class="workspace-nav" data-guide-id="main-tabs">
-				<button mat-stroked-button type="button" [class.active]="mainView() === 'dashboard'" (click)="setMainView('dashboard')">{{ 'Dashboard' | t }}</button>
-				<button mat-stroked-button type="button" [class.active]="mainView() === 'my-sets'" (click)="setMainView('my-sets')">{{ 'My Sets' | t }}</button>
-				<button mat-stroked-button type="button" [class.active]="mainView() === 'missing-parts'" (click)="setMainView('missing-parts')">{{ 'Missing Parts' | t }}</button>
+				<button mat-stroked-button type="button" data-guide-id="tab-dashboard" [class.active]="mainView() === 'dashboard'" (mousedown)="setMainView('dashboard')" (click)="setMainView('dashboard')">{{ 'Dashboard' | t }}</button>
+				<button mat-stroked-button type="button" [class.active]="mainView() === 'dashboard' && showSetCatalog()" (mousedown)="openSetCatalog()" (click)="openSetCatalog()">{{ 'Set Catalog' | t }}</button>
+				<button mat-stroked-button type="button" data-guide-id="tab-my-sets" [class.active]="mainView() === 'my-sets'" (mousedown)="setMainView('my-sets')" (click)="setMainView('my-sets')">{{ 'My Sets' | t }}</button>
+				<button mat-stroked-button type="button" data-guide-id="tab-missing-parts" [class.active]="mainView() === 'missing-parts'" (mousedown)="setMainView('missing-parts')" (click)="setMainView('missing-parts')">{{ 'Missing Parts' | t }}</button>
+				<button mat-stroked-button type="button" data-guide-id="tab-buildable-sets" [class.active]="mainView() === 'buildable-sets'" (mousedown)="setMainView('buildable-sets')" (click)="setMainView('buildable-sets')">{{ 'Buildable Sets' | t }}</button>
+				<button mat-stroked-button type="button" [class.active]="mainView() === 'build-mode'" (mousedown)="setMainView('build-mode')" (click)="setMainView('build-mode')">{{ 'Build Mode' | t }}</button>
+				<button mat-stroked-button type="button" [class.active]="mainView() === 'inventory-overview'" (mousedown)="setMainView('inventory-overview')" (click)="setMainView('inventory-overview')">{{ 'My Parts' | t }}</button>
 			</nav>
 
 			<section *ngIf="mainView() === 'dashboard'" class="dashboard-grid">
-			<mat-card class="quickstart-card">
-				<mat-card-title>{{ 'What do you want to do?' | t }}</mat-card-title>
-				<mat-card-subtitle>{{ 'Start with one task, then open details only when you need them.' | t }}</mat-card-subtitle>
-				<div class="quick-actions">
-					<button class="action-primary" mat-flat-button type="button" (click)="setMainView('my-sets')">
-						<mat-icon>add_box</mat-icon>
-						{{ 'Add New Set' | t }}
-					</button>
-					<button class="action-secondary" mat-stroked-button type="button" (click)="setMainView('missing-parts')">
-						<mat-icon>search</mat-icon>
-						{{ 'Review Missing Parts' | t }}
-					</button>
-					<button class="action-tertiary" mat-button type="button" (click)="openSetCatalog()">
-						<mat-icon>inventory_2</mat-icon>
-						{{ 'Discover Sets' | t }}
-					</button>
-				</div>
-			</mat-card>
+			<section class="dashboard-top-zone">
+				<section class="dashboard-main-column">
+					<mat-card class="quickstart-card">
+						<mat-card-title>{{ 'What do you want to do?' | t }}</mat-card-title>
+						<mat-card-subtitle>{{ 'Start with one task, then open details only when you need them.' | t }}</mat-card-subtitle>
+						<div class="buildable-highlight continue-highlight" *ngIf="hasContinueBuild() && continueBuild() as active; else primaryStartBuild">
+							<div class="buildable-highlight-copy">
+								<mat-icon>local_fire_department</mat-icon>
+								<span>
+									{{ 'Continue Build' | t }}: {{ continueBuildLabel() }} ({{ active.completion }}%)
+								</span>
+							</div>
+							<button mat-flat-button type="button" class="action-primary" (click)="startBuild()">
+								<mat-icon>play_arrow</mat-icon>
+								{{ 'Continue' | t }}
+							</button>
+						</div>
 
-			<mat-card class="workflow-card">
-				<div class="workflow-head">
-					<mat-card-title>{{ 'Guided Workflow' | t }}</mat-card-title>
-					<button mat-button type="button" class="workflow-toggle" *ngIf="isMobileView()" (click)="toggleWorkflowExpanded()">
-						<mat-icon>{{ workflowExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
-						{{ workflowExpanded() ? ('Hide Workflow' | t) : ('Open Workflow' | t) }}
-					</button>
-				</div>
-				<div class="workflow-steps" *ngIf="!isMobileView() || workflowExpanded()">
-					<button type="button" class="workflow-step" [ngClass]="workflowStepClass(1)" (click)="goToWorkflowStep(1)">
-						<mat-icon>{{ workflowStepIcon(1) }}</mat-icon>
-						<span>{{ 'Select Sets' | t }}</span>
-					</button>
-					<button type="button" class="workflow-step" [ngClass]="workflowStepClass(2)" (click)="goToWorkflowStep(2)">
-						<mat-icon>{{ workflowStepIcon(2) }}</mat-icon>
-						<span>{{ 'Check Parts' | t }}</span>
-					</button>
-					<button type="button" class="workflow-step" [ngClass]="workflowStepClass(3)" (click)="goToWorkflowStep(3)">
-						<mat-icon>{{ workflowStepIcon(3) }}</mat-icon>
-						<span>{{ 'See Missing' | t }}</span>
-					</button>
-					<button type="button" class="workflow-step" [ngClass]="workflowStepClass(4)" (click)="goToWorkflowStep(4)">
-						<mat-icon>{{ workflowStepIcon(4) }}</mat-icon>
-						<span>{{ 'Export / Buy' | t }}</span>
-					</button>
-				</div>
-			</mat-card>
+						<ng-template #primaryStartBuild>
+							<div class="buildable-highlight continue-highlight compact-highlight">
+								<div class="buildable-highlight-copy">
+									<mat-icon>play_circle</mat-icon>
+									<span>{{ 'Start Build' | t }}</span>
+								</div>
+								<button mat-flat-button type="button" class="action-primary" (click)="startBuild()">
+									<mat-icon>play_arrow</mat-icon>
+									{{ 'Start Build' | t }}
+								</button>
+							</div>
+						</ng-template>
 
-			<section class="nested-tabs" *ngIf="showSetCatalog()">
-				<lego-sets></lego-sets>
+						<div class="buildable-highlight buildable-meta-row" *ngIf="!dashboardBuildableLoading()">
+							<div class="buildable-highlight-copy">
+								<mat-icon>verified</mat-icon>
+								<span>{{ dashboardBuildableHeadline() | t }}</span>
+							</div>
+							<button class="action-secondary" mat-stroked-button type="button" (click)="setMainView('buildable-sets')">
+								<mat-icon>build_circle</mat-icon>
+								{{ 'Check Buildable Sets' | t }}
+							</button>
+						</div>
+					</mat-card>
+
+					<section class="dashboard-management-actions">
+						<div class="quick-actions">
+							<button class="action-secondary" mat-stroked-button type="button" (click)="setMainView('my-sets')">
+								<mat-icon>add_box</mat-icon>
+								{{ 'Add New Set' | t }}
+							</button>
+							<button class="action-tertiary" mat-button type="button" (click)="toggleDashboardAdvancedActions()">
+								<mat-icon>{{ dashboardAdvancedActionsOpen() ? 'expand_less' : 'more_horiz' }}</mat-icon>
+								{{ dashboardAdvancedActionsOpen() ? ('Hide Options' | t) : ('More Options' | t) }}
+							</button>
+						</div>
+						<div class="quick-actions quick-actions-advanced" *ngIf="dashboardAdvancedActionsOpen()">
+							<button class="action-secondary" mat-stroked-button type="button" (click)="setMainView('missing-parts')">
+								<mat-icon>search</mat-icon>
+								{{ 'Review Missing Parts' | t }}
+							</button>
+							<button class="action-tertiary" mat-button type="button" (click)="openSetCatalog()">
+								<mat-icon>inventory_2</mat-icon>
+								{{ 'Discover Sets' | t }}
+							</button>
+							<button class="action-secondary" mat-stroked-button type="button" (click)="setMainView('buildable-sets')">
+								<mat-icon>build_circle</mat-icon>
+								{{ 'Check Buildable Sets' | t }}
+							</button>
+						</div>
+					</section>
+				</section>
+
+				<aside class="dashboard-help-column">
+					<section class="dashboard-context-stack">
+				<mat-card class="workflow-card">
+					<div class="workflow-head">
+						<mat-card-title>{{ 'Guided Workflow' | t }}</mat-card-title>
+						<button mat-button type="button" class="workflow-toggle" *ngIf="isMobileView()" (click)="toggleWorkflowExpanded()">
+							<mat-icon>{{ workflowExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+							{{ workflowExpanded() ? ('Hide Workflow' | t) : ('Open Workflow' | t) }}
+						</button>
+					</div>
+					<div class="workflow-steps" *ngIf="!isMobileView() || workflowExpanded()">
+						<button type="button" class="workflow-step" [ngClass]="workflowStepClass(1)" (click)="goToWorkflowStep(1)">
+							<mat-icon>{{ workflowStepIcon(1) }}</mat-icon>
+							<span>{{ 'Select Sets' | t }}</span>
+						</button>
+						<button type="button" class="workflow-step" [ngClass]="workflowStepClass(2)" (click)="goToWorkflowStep(2)">
+							<mat-icon>{{ workflowStepIcon(2) }}</mat-icon>
+							<span>{{ 'Check Parts' | t }}</span>
+						</button>
+						<button type="button" class="workflow-step" [ngClass]="workflowStepClass(3)" (click)="goToWorkflowStep(3)">
+							<mat-icon>{{ workflowStepIcon(3) }}</mat-icon>
+							<span>{{ 'See Missing' | t }}</span>
+						</button>
+						<button type="button" class="workflow-step" [ngClass]="workflowStepClass(4)" (click)="goToWorkflowStep(4)">
+							<mat-icon>{{ workflowStepIcon(4) }}</mat-icon>
+							<span>{{ 'Export / Buy' | t }}</span>
+						</button>
+					</div>
+				</mat-card>
+
+				<mat-card class="workflow-card suggestion-card" data-guide-id="smart-suggestions">
+					<mat-card-title>{{ 'Smart Suggestions' | t }}</mat-card-title>
+					<div class="workflow-steps" *ngIf="smartSuggestionsLoading()">
+						<span class="workflow-step todo">
+							<mat-icon>hourglass_top</mat-icon>
+							<span>{{ 'Loading suggestions...' | t }}</span>
+						</span>
+					</div>
+					<div class="workflow-steps" *ngIf="!smartSuggestionsLoading()">
+						<button
+							type="button"
+							class="workflow-step"
+							*ngFor="let suggestion of smartSuggestions()"
+							(click)="openSmartSuggestionTarget(suggestion.target)"
+						>
+							<mat-icon>tips_and_updates</mat-icon>
+							<span>{{ suggestion.text }}</span>
+						</button>
+					</div>
+				</mat-card>
+					</section>
+				</aside>
+			</section>
+
+			<section class="dashboard-explore-zone" *ngIf="showSetCatalog()">
+				<section class="catalog-section-divider">
+					<span class="catalog-kicker">{{ 'Set Catalog' | t }}</span>
+					<h3>{{ 'Explore Sets' | t }}</h3>
+				</section>
+
+				<section class="nested-tabs dashboard-catalog">
+					<lego-sets></lego-sets>
+				</section>
 			</section>
 
 			<section class="admin-tools" *ngIf="user.is_admin && showAdminTables()">
@@ -169,22 +281,46 @@
 				<lego-user-missing-parts></lego-user-missing-parts>
 			</section>
 
-			<button mat-fab type="button" class="mobile-fab" *ngIf="isMobileView()" (click)="setMainView('my-sets')" [attr.aria-label]="('Add Set' | t)">
-				<mat-icon>add</mat-icon>
+			<section class="nested-tabs" *ngIf="mainView() === 'buildable-sets'">
+				<ng-container *ngComponentOutlet="buildableSetsComponent"></ng-container>
+			</section>
+
+			<section class="nested-tabs" *ngIf="mainView() === 'build-mode'">
+				<ng-container *ngComponentOutlet="buildModeComponent"></ng-container>
+			</section>
+
+			<section class="nested-tabs" *ngIf="mainView() === 'inventory-overview'">
+				<ng-container *ngComponentOutlet="inventoryOverviewComponent"></ng-container>
+			</section>
+
+			<button
+				mat-fab
+				type="button"
+				class="mobile-fab"
+				*ngIf="isMobileView()"
+				(click)="handleMobileFabClick()"
+				[attr.aria-label]="(mobileFabLabel() | t)"
+				[matTooltip]="(mobileFabLabel() | t)"
+			>
+				<mat-icon>{{ mobileFabIcon() }}</mat-icon>
 			</button>
 
 			<nav class="mobile-bottom-nav" *ngIf="isMobileView()" aria-label="Main">
-				<button type="button" [class.active]="mainView() === 'dashboard'" (click)="setMainView('dashboard')">
+				<button type="button" [class.active]="mainView() === 'dashboard'" (mousedown)="setMainView('dashboard')" (click)="setMainView('dashboard')">
 					<mat-icon>home</mat-icon>
 					<span>{{ 'Dashboard' | t }}</span>
 				</button>
-				<button type="button" [class.active]="mainView() === 'my-sets'" (click)="setMainView('my-sets')">
+				<button type="button" [class.active]="mainView() === 'my-sets'" (mousedown)="setMainView('my-sets')" (click)="setMainView('my-sets')">
 					<mat-icon>inventory_2</mat-icon>
 					<span>{{ 'My Sets' | t }}</span>
 				</button>
-				<button type="button" [class.active]="mainView() === 'missing-parts'" (click)="setMainView('missing-parts')">
+				<button type="button" [class.active]="mainView() === 'missing-parts'" (mousedown)="setMainView('missing-parts')" (click)="setMainView('missing-parts')">
 					<mat-icon>warning_amber</mat-icon>
 					<span>{{ 'Missing Parts' | t }}</span>
+				</button>
+				<button type="button" [class.active]="mainView() === 'build-mode'" (mousedown)="setMainView('build-mode')" (click)="setMainView('build-mode')">
+					<mat-icon>play_circle</mat-icon>
+					<span>{{ 'Build Mode' | t }}</span>
 				</button>
 			</nav>
 		</div>

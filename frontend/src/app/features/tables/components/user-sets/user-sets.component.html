@@ -105,11 +105,14 @@
 				<div class="selected-set-copy">{{ 'Selected set image' | t }}</div>
 			</div>
 
+			<div class="builder-split" *ngIf="setParts().length > 0">
+				<div class="flow-step-label section-split-label">{{ '3. Review Parts' | t }}</div>
+			</div>
+
 			<button type="button" class="mobile-step-toggle" *ngIf="isMobileLayout() && setParts().length > 0" (click)="openMobileStep(3)">
 				<span>{{ '3. Review Parts' | t }}</span>
 				<mat-icon>{{ activeMobileStep() === 3 ? 'expand_less' : 'expand_more' }}</mat-icon>
 			</button>
-			<div class="flow-step-label" *ngIf="!isMobileLayout() && setParts().length > 0">{{ '3. Review Parts' | t }}</div>
 			<ng-container *ngIf="setParts().length > 0 && isStepVisible(3)">
 			<div class="parts-toolbar" *ngIf="setParts().length > 0">
 				<div class="quick-actions-label">{{ 'Quick Actions:' | t }}</div>
@@ -327,7 +330,8 @@
 												/>
 											</mat-form-field>
 											<div class="row-actions">
-												<button mat-stroked-button type="button" (click)="saveBreakdownQuantity('available', part)" [disabled]="isUpdatingRow('available', part.row_id)">{{ 'Save' | t }}</button>
+												<button mat-flat-button type="button" class="save-inline-btn" (click)="saveBreakdownQuantity('available', part)" [disabled]="isUpdatingRow('available', part.row_id)">{{ 'Save' | t }}</button>
+												<span class="autosave-state" [class.error]="autoSaveLabel('available', part.row_id) === 'Retry needed'">{{ autoSaveLabel('available', part.row_id) | t }}</span>
 											</div>
 										</div>
 									</div>
@@ -353,7 +357,8 @@
 												/>
 											</mat-form-field>
 											<div class="row-actions">
-												<button mat-stroked-button type="button" (click)="saveBreakdownQuantity('missing', part)" [disabled]="isUpdatingRow('missing', part.row_id)">{{ 'Save' | t }}</button>
+												<button mat-flat-button type="button" class="save-inline-btn" (click)="saveBreakdownQuantity('missing', part)" [disabled]="isUpdatingRow('missing', part.row_id)">{{ 'Save' | t }}</button>
+												<span class="autosave-state" [class.error]="autoSaveLabel('missing', part.row_id) === 'Retry needed'">{{ autoSaveLabel('missing', part.row_id) | t }}</span>
 											</div>
 										</div>
 									</div>

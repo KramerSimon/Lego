@@ -140,6 +140,10 @@ export class OnboardingGuideComponent implements AfterViewInit {
     this.guide.close();
   }
 
+  skipGuide(): void {
+    this.guide.skip();
+  }
+
   nextStep(): void {
     this.guide.next();
   }
@@ -248,7 +252,17 @@ export class OnboardingGuideComponent implements AfterViewInit {
       || step.id === 'missing-parts-actions'
       || step.id === 'missing-parts-table'
     ) {
-      this.clickMainTab(2);
+      this.clickWorkspaceTab('tab-missing-parts');
+      return;
+    }
+
+    if (
+      step.id === 'tab-buildable-sets'
+      || step.id === 'buildable-summary'
+      || step.id === 'buildable-filters'
+      || step.id === 'buildable-table'
+    ) {
+      this.clickWorkspaceTab('tab-buildable-sets');
       return;
     }
 
@@ -259,17 +273,17 @@ export class OnboardingGuideComponent implements AfterViewInit {
       || step.id === 'set-catalog-theme'
       || step.id === 'set-catalog-table'
     ) {
-      this.clickMainTab(3);
+      this.clickWorkspaceTab('tab-dashboard');
       return;
     }
 
     if (step.id === 'set-input' || step.id === 'quantity-input' || step.id === 'save-action') {
-      this.clickMainTab(1);
+      this.clickWorkspaceTab('tab-my-sets');
     }
   }
 
-  private clickMainTab(index: number): void {
-    const tab = document.querySelector(`.top-tabs .mdc-tab:nth-child(${index})`) as HTMLElement | null;
+  private clickWorkspaceTab(tabGuideId: string): void {
+    const tab = document.querySelector(`[data-guide-id="${tabGuideId}"]`) as HTMLElement | null;
     if (tab) {
       tab.click();
     }

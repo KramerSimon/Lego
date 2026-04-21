@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -30,6 +30,7 @@ import { forkJoin } from 'rxjs';
 import { UserSetConfirmDialogComponent } from './user-set-confirm-dialog.component';
 import { USER_SETS_CONFIG } from '../../config/table-definitions';
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { GlobalSearchService } from '../../../../core/services/global-search.service';
 
 @Component({
   selector: 'lego-user-sets',
@@ -56,7 +57,7 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
   templateUrl: './user-sets.component.html',
   styleUrl: './user-sets.component.scss'
 })
-export class UserSetsComponent implements OnInit {
+export class UserSetsComponent implements OnInit, OnDestroy {
   readonly config = USER_SETS_CONFIG;
   readonly publicConditionOptions: Array<{ value: string; label: string }> = [
     { value: '', label: 'Unknown condition' },
@@ -75,7 +76,10 @@ export class UserSetsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
+  private readonly globalSearch = inject(GlobalSearchService);
   private setSearchTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly autoSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private processedSearchTimestamp = 0;
   private mobileMediaQuery: MediaQueryList | null = null;
 
   readonly isAdmin = computed(() => Boolean(this.auth.user()?.is_admin));
@@ -108,7 +112,7 @@ export class UserSetsComponent implements OnInit {
   readonly rows = signal<Record<string, unknown>[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
-  readonly pageSize = signal(25);
+  readonly pageSize = signal(15);
   readonly pageSizeOptions = [10, 25, 50, 100, 200];
   readonly catalogColumns = signal<string[]>([]);
   readonly catalogDetailColumns = ['expandedDetail'];
@@ -124,6 +128,7 @@ export class UserSetsComponent implements OnInit {
   readonly breakdownRequiredTotals = signal<Record<number, Record<string, number>>>({});
   readonly editedQuantities = signal<Record<string, number>>({});
   readonly updatingRowKey = signal<string | null>(null);
+  readonly autoSaveStatus = signal<Record<string, 'idle' | 'saving' | 'saved' | 'error'>>({});
   readonly deletingUserSetId = signal<number | null>(null);
   readonly selectedSetImageUrl = computed(() => {
     const selectedSetNum = (this.form.controls.set_num.value ?? '').trim();
@@ -219,6 +224,28 @@ export class UserSetsComponent implements OnInit {
     this.form.controls.quantity.valueChanges.subscribe(() => {
       this.reconcileOwnedQuantities();
     });
+
+    effect(() => {
+      const request = this.globalSearch.request();
+      if (!request || request.timestamp <= this.processedSearchTimestamp) {
+        return;
+      }
+      if (request.scope !== 'all' && request.scope !== 'my-sets') {
+        return;
+      }
+
+      this.processedSearchTimestamp = request.timestamp;
+      this.showCreateForm.set(true);
+      this.setSearchTerm.set(request.query);
+      this.searchSetOptions(request.query);
+    });
+  }
+
+  ngOnDestroy(): void {
+    for (const timer of this.autoSaveTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.autoSaveTimers.clear();
   }
 
   handlePage(event: PageEvent): void {
@@ -295,7 +322,9 @@ export class UserSetsComponent implements OnInit {
   handleSetPanelOpened(opened: boolean): void {
     if (opened) {
       this.setSearchTerm.set('');
-      this.searchSetOptions('');
+      if (this.sets().length === 0 && !this.loadingSetOptions()) {
+        this.searchSetOptions('');
+      }
     }
   }
 
@@ -459,6 +488,7 @@ export class UserSetsComponent implements OnInit {
         ...current,
         [key]: safeValue
       }));
+      this.scheduleAutoSave(kind, row.row_id);
       return;
     }
 
@@ -468,6 +498,7 @@ export class UserSetsComponent implements OnInit {
         ...current,
         [key]: safeValue
       }));
+      this.scheduleAutoSave(kind, row.row_id);
       return;
     }
 
@@ -483,6 +514,7 @@ export class UserSetsComponent implements OnInit {
         [key]: nextAvailable,
         [counterpartKey]: nextMissing
       }));
+      this.scheduleAutoSave(kind, row.row_id);
       return;
     }
 
@@ -494,9 +526,10 @@ export class UserSetsComponent implements OnInit {
       [key]: nextMissing,
       [counterpartKey]: nextAvailable
     }));
+    this.scheduleAutoSave(kind, row.row_id);
   }
 
-  saveBreakdownQuantity(kind: 'available' | 'missing', row: UserSetBreakdownPart): void {
+  saveBreakdownQuantity(kind: 'available' | 'missing', row: UserSetBreakdownPart, silent = false): void {
     const userSetId = this.expandedUserSetId();
     const breakdown = this.expandedBreakdown();
     if (!userSetId || !breakdown) {
@@ -506,6 +539,7 @@ export class UserSetsComponent implements OnInit {
     const counterpart = this.findCounterpartPart(kind, row, breakdown);
     const rowKey = this.getRowActionKey(kind, row.row_id);
     const quantity = this.getEditableQuantity(kind, row);
+    this.setAutoSaveStatus(kind, row.row_id, 'saving');
 
     if (!counterpart) {
       this.updatingRowKey.set(rowKey);
@@ -533,11 +567,17 @@ export class UserSetsComponent implements OnInit {
               [userSetId]: next
             };
           });
-          this.snackBar.open('Part quantity updated.', 'Close', { duration: 1800 });
+          this.setAutoSaveStatus(kind, row.row_id, 'saved');
+          if (!silent) {
+            this.snackBar.open('Part quantity updated.', 'Close', { duration: 1800 });
+          }
         },
         error: () => {
           this.updatingRowKey.set(null);
-          this.snackBar.open('Failed to update part quantity.', 'Close', { duration: 2600 });
+          this.setAutoSaveStatus(kind, row.row_id, 'error');
+          if (!silent) {
+            this.snackBar.open('Failed to update part quantity.', 'Close', { duration: 2600 });
+          }
         }
       });
       return;
@@ -582,13 +622,33 @@ export class UserSetsComponent implements OnInit {
             [userSetId]: next
           };
         });
-        this.snackBar.open('Available and missing quantities balanced and saved.', 'Close', { duration: 2200 });
+        this.setAutoSaveStatus(kind, row.row_id, 'saved');
+        if (!silent) {
+          this.snackBar.open('Available and missing quantities balanced and saved.', 'Close', { duration: 2200 });
+        }
       },
       error: () => {
         this.updatingRowKey.set(null);
-        this.snackBar.open('Failed to save balanced quantities.', 'Close', { duration: 2600 });
+        this.setAutoSaveStatus(kind, row.row_id, 'error');
+        if (!silent) {
+          this.snackBar.open('Failed to save balanced quantities.', 'Close', { duration: 2600 });
+        }
       }
     });
+  }
+
+  autoSaveLabel(kind: 'available' | 'missing', rowId: number): string {
+    const status = this.autoSaveStatus()[this.getRowActionKey(kind, rowId)] ?? 'idle';
+    if (status === 'saving') {
+      return 'Saving...';
+    }
+    if (status === 'saved') {
+      return 'Saved ✓';
+    }
+    if (status === 'error') {
+      return 'Retry needed';
+    }
+    return '';
   }
 
   deleteCatalogUserSet(row: Record<string, unknown>): void {
@@ -763,7 +823,7 @@ export class UserSetsComponent implements OnInit {
     this.loadingOptions.set(true);
 
     forkJoin([
-      this.usersApi.getRows(1, 500)
+      this.usersApi.getRows(1, 200)
     ]).subscribe({
       next: ([usersResponse]) => {
       const userRows = this.unwrapRows(usersResponse);
@@ -774,7 +834,6 @@ export class UserSetsComponent implements OnInit {
       })).filter((row) => Number.isFinite(row.user_id) && row.user_id > 0));
 
       this.loadingOptions.set(false);
-      this.searchSetOptions('');
       },
       error: () => {
         this.loadingOptions.set(false);
@@ -799,6 +858,50 @@ export class UserSetsComponent implements OnInit {
   private triggerHapticFeedback(): void {
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
       navigator.vibrate(12);
+    }
+  }
+
+  private scheduleAutoSave(kind: 'available' | 'missing', rowId: number): void {
+    const key = this.getRowActionKey(kind, rowId);
+    const activeTimer = this.autoSaveTimers.get(key);
+    if (activeTimer) {
+      clearTimeout(activeTimer);
+    }
+
+    this.setAutoSaveStatus(kind, rowId, 'saving');
+    const timer = setTimeout(() => {
+      this.autoSaveTimers.delete(key);
+      const breakdown = this.expandedBreakdown();
+      if (!breakdown) {
+        return;
+      }
+
+      const source = kind === 'available' ? breakdown.available_parts : breakdown.missing_parts;
+      const targetRow = source.find((part) => part.row_id === rowId);
+      if (!targetRow) {
+        return;
+      }
+
+      this.saveBreakdownQuantity(kind, targetRow, true);
+    }, 650);
+
+    this.autoSaveTimers.set(key, timer);
+  }
+
+  private setAutoSaveStatus(kind: 'available' | 'missing', rowId: number, status: 'idle' | 'saving' | 'saved' | 'error'): void {
+    const key = this.getRowActionKey(kind, rowId);
+    this.autoSaveStatus.update((current) => ({
+      ...current,
+      [key]: status
+    }));
+
+    if (status === 'saved') {
+      setTimeout(() => {
+        this.autoSaveStatus.update((current) => ({
+          ...current,
+          [key]: 'idle'
+        }));
+      }, 1700);
     }
   }
 
@@ -896,7 +999,6 @@ export class UserSetsComponent implements OnInit {
   }
 
   private reloadCatalog(): void {
-    this.loadingCatalog.set(true);
     const sortColumn = this.resolveServerSortColumn(this.sortColumn());
     const sortDirection = this.sortDirection();
     const userFilter = this.catalogUserFilter();
@@ -908,6 +1010,8 @@ export class UserSetsComponent implements OnInit {
     if (typeof userFilter === 'number' && Number.isFinite(userFilter) && userFilter > 0) {
       extraParams['user_id'] = userFilter;
     }
+
+    this.loadingCatalog.set(true);
 
     this.userSetsTableApi.getRows(this.page(), this.pageSize(), extraParams).subscribe({
       next: (response) => {

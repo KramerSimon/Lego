@@ -18,6 +18,7 @@ export class OnboardingGuideService {
 
   readonly isOpen = signal(false);
   readonly isMandatory = signal(false);
+  readonly skippedMandatory = signal(false);
   readonly currentStepIndex = signal(0);
 
   readonly steps = signal<OnboardingStep[]>([
@@ -44,6 +45,38 @@ export class OnboardingGuideService {
       description: 'This tab shows your unresolved shortages so you can prioritize replacements quickly.',
       icon: 'warning_amber',
       placement: 'bottom'
+    },
+    {
+      id: 'tab-buildable-sets',
+      selector: '[data-guide-id="tab-buildable-sets"]',
+      title: 'Buildable Sets Tab',
+      description: 'Use this area to see which sets you can build right now from the parts you already own.',
+      icon: 'build_circle',
+      placement: 'bottom'
+    },
+    {
+      id: 'buildable-summary',
+      selector: '[data-guide-id="buildable-summary"]',
+      title: 'Buildable Sets Summary',
+      description: 'Track your buildable count and total matching sets at a glance before opening details.',
+      icon: 'insights',
+      placement: 'bottom'
+    },
+    {
+      id: 'buildable-filters',
+      selector: '[data-guide-id="buildable-filters"]',
+      title: 'Buildable Filters',
+      description: 'Open filters to narrow by search text, theme, or buildable-only mode.',
+      icon: 'filter_list',
+      placement: 'left'
+    },
+    {
+      id: 'buildable-table',
+      selector: '[data-guide-id="buildable-table"]',
+      title: 'Buildable Results',
+      description: 'Sort this table to prioritize easiest builds and inspect completeness before starting.',
+      icon: 'table_rows',
+      placement: 'top'
     },
     {
       id: 'missing-parts-filters',
@@ -161,7 +194,7 @@ export class OnboardingGuideService {
 
       const shouldRunMandatory = Boolean(user.onboarding_guide_required) && !Boolean(user.onboarding_completed);
 
-      if (shouldRunMandatory && !this.isOpen()) {
+      if (shouldRunMandatory && !this.isOpen() && !this.skippedMandatory()) {
         setTimeout(() => this.start(true), 100);
       }
     });
@@ -174,6 +207,9 @@ export class OnboardingGuideService {
 
     this.currentStepIndex.set(0);
     this.isMandatory.set(mandatory);
+    if (!mandatory) {
+      this.skippedMandatory.set(false);
+    }
     this.isOpen.set(true);
   }
 
@@ -202,19 +238,28 @@ export class OnboardingGuideService {
 
         this.isOpen.set(false);
         this.isMandatory.set(false);
+        this.skippedMandatory.set(false);
       });
       return;
     }
 
     this.isOpen.set(false);
     this.isMandatory.set(false);
+    this.skippedMandatory.set(false);
   }
 
   close(): void {
     if (this.isMandatory()) {
+      this.skip();
       return;
     }
     this.isOpen.set(false);
+  }
+
+  skip(): void {
+    this.isOpen.set(false);
+    this.isMandatory.set(false);
+    this.skippedMandatory.set(true);
   }
 
   startMandatoryGuide(): void {
@@ -224,6 +269,7 @@ export class OnboardingGuideService {
   private forceClose(): void {
     this.isOpen.set(false);
     this.isMandatory.set(false);
+    this.skippedMandatory.set(false);
     this.currentStepIndex.set(0);
   }
 }

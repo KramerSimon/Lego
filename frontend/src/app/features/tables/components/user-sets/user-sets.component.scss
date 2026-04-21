@@ -13,9 +13,10 @@
 }
 
 .entry-card {
-  border-radius: 14px;
+  border-radius: 18px !important;
+  overflow: hidden;
   background: var(--lego-card-bg);
-  border: 0;
+  border: 1px solid var(--lego-card-border);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
 }
 
@@ -78,6 +79,16 @@ mat-card-subtitle {
   letter-spacing: 0.06em;
   font-weight: 800;
   color: var(--lego-form-label);
+}
+
+.builder-split {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--lego-card-border);
+}
+
+.section-split-label {
+  margin-top: 0;
 }
 
 .mobile-step-toggle {
@@ -577,6 +588,19 @@ button[mat-stroked-button][disabled] {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+}
+
+.save-inline-btn {
+  border-radius: 999px;
+  min-height: 36px;
+  padding: 0 14px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #0b7285 0%, #1098ad 100%);
+  color: #ffffff;
+}
+
+.autosave-state {
+  color: #2b7c45;
 }
 
 .muted {

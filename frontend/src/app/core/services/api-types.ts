@@ -199,3 +199,19 @@ export interface MissingPartCatalogRow {
   email?: string;
   full_name?: string;
 }
+
+export interface BuildableSetCatalogRow {
+  set_num: string;
+  set_name: string;
+  img_url?: string;
+  year?: number;
+  theme_id?: number;
+  theme_name?: string;
+  inventory_id: number;
+  required_parts: number;
+  owned_matching_parts: number;
+  missing_parts: number;
+  missing_lots: number;
+  completeness_percentage: number;
+  is_buildable: number;
+}

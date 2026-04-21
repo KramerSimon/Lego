@@ -21,6 +21,7 @@
 
       <div class="guide-actions">
         <button mat-stroked-button type="button" (click)="previousStep()" [disabled]="!canGoBack()">{{ 'Back' | t }}</button>
+        <button mat-stroked-button type="button" (click)="skipGuide()">{{ 'Skip Guide' | t }}</button>
         <button
           mat-stroked-button
           type="button"

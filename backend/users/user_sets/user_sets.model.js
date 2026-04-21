@@ -1,6 +1,9 @@
 import database from '../../database.js';
 const tableName = 'user_sets';
 const idColumn = 'user_set_id';
+const BUILDABLE_CACHE_TTL_MS = 15000;
+const BUILDABLE_CACHE_MAX_ENTRIES = 200;
+const buildableCatalogCache = new Map();
 const CONDITION_TAGS = new Set([
   'sealed',
   'like_new',
@@ -498,6 +501,210 @@ async function getSetParts(setNum) {
   }
 }
 
+function parseBooleanFilter(value) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+}
+
+function normalizeBuildableSortBy(value) {
+  return String(value ?? '').trim().toLowerCase() || 'missing_parts';
+}
+
+function normalizeBuildableSortDir(value) {
+  return String(value ?? '').trim().toLowerCase() === 'asc' ? 'asc' : 'desc';
+}
+
+function buildBuildableCacheKey(query, page, pageSize) {
+  return JSON.stringify({
+    viewer_user_id: Number(query.viewer_user_id ?? 0),
+    page,
+    pageSize,
+    search: String(query.search ?? '').trim().toLowerCase(),
+    theme_id: Number(query.theme_id ?? 0),
+    buildableOnly: parseBooleanFilter(query.buildableOnly) ? 1 : 0,
+    sortBy: normalizeBuildableSortBy(query.sortBy),
+    sortDir: normalizeBuildableSortDir(query.sortDir)
+  });
+}
+
+function getBuildableCache(key) {
+  const cached = buildableCatalogCache.get(key);
+  if (!cached) {
+    return null;
+  }
+
+  if (Date.now() > cached.expiresAt) {
+    buildableCatalogCache.delete(key);
+    return null;
+  }
+
+  return cached.value;
+}
+
+function setBuildableCache(key, value) {
+  if (buildableCatalogCache.size >= BUILDABLE_CACHE_MAX_ENTRIES) {
+    const firstKey = buildableCatalogCache.keys().next().value;
+    if (firstKey) {
+      buildableCatalogCache.delete(firstKey);
+    }
+  }
+
+  buildableCatalogCache.set(key, {
+    value,
+    expiresAt: Date.now() + BUILDABLE_CACHE_TTL_MS
+  });
+}
+
+async function getBuildableCatalog(query = {}) {
+  try {
+    const { page, pageSize, offset } = database.parsePagination(query);
+    const viewerUserId = Number(query.viewer_user_id);
+    const cacheKey = buildBuildableCacheKey(query, page, pageSize);
+    const cachedValue = getBuildableCache(cacheKey);
+    if (cachedValue) {
+      return cachedValue;
+    }
+
+    if (!Number.isFinite(viewerUserId) || viewerUserId <= 0) {
+      return {
+        data: [],
+        page,
+        pageSize,
+        total: 0,
+        totalPages: 0
+      };
+    }
+
+    const search = String(query.search ?? '').trim();
+    const themeId = Number(query.theme_id);
+    const buildableOnly = parseBooleanFilter(query.buildableOnly);
+
+    const whereClauses = [];
+    const baseParams = [viewerUserId];
+
+    if (search) {
+      whereClauses.push('(s.set_num LIKE ? OR s.name LIKE ?)');
+      const like = `%${search}%`;
+      baseParams.push(like, like);
+    }
+
+    if (Number.isFinite(themeId) && themeId > 0) {
+      whereClauses.push('s.theme_id = ?');
+      baseParams.push(themeId);
+    }
+
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const statsSql = `
+      SELECT
+        s.set_num,
+        s.name AS set_name,
+        s.img_url,
+        s.year,
+        s.theme_id,
+        t.name AS theme_name,
+        inv_latest.inventory_id,
+        COALESCE(SUM(ip.quantity), 0) AS required_parts,
+        COALESCE(SUM(LEAST(ip.quantity, COALESCE(up.owned_quantity, 0))), 0) AS owned_matching_parts,
+        COALESCE(SUM(GREATEST(ip.quantity - COALESCE(up.owned_quantity, 0), 0)), 0) AS missing_parts,
+        SUM(CASE WHEN GREATEST(ip.quantity - COALESCE(up.owned_quantity, 0), 0) > 0 THEN 1 ELSE 0 END) AS missing_lots
+      FROM sets s
+      INNER JOIN (
+        SELECT i.set_num, i.id AS inventory_id
+        FROM inventories i
+        INNER JOIN (
+          SELECT set_num, MAX(version) AS max_version
+          FROM inventories
+          GROUP BY set_num
+        ) latest
+          ON latest.set_num = i.set_num
+         AND latest.max_version = i.version
+      ) inv_latest
+        ON inv_latest.set_num = s.set_num
+      INNER JOIN inventory_parts ip
+        ON ip.inventory_id = inv_latest.inventory_id
+       AND (ip.is_spare = 0 OR ip.is_spare IS NULL)
+      LEFT JOIN (
+        SELECT part_num, color_id, SUM(quantity) AS owned_quantity
+        FROM user_parts
+        WHERE user_id = ?
+        GROUP BY part_num, color_id
+      ) up
+        ON up.part_num = ip.part_num
+       AND up.color_id = ip.color_id
+      LEFT JOIN themes t
+        ON t.id = s.theme_id
+      ${whereSql}
+      GROUP BY s.set_num, s.name, s.img_url, s.year, s.theme_id, t.name, inv_latest.inventory_id
+    `;
+
+    const filteredClauses = ['stats.owned_matching_parts > 0'];
+    if (buildableOnly) {
+      filteredClauses.push('stats.missing_parts = 0');
+    }
+    const filteredWhere = filteredClauses.length > 0
+      ? `WHERE ${filteredClauses.join(' AND ')}`
+      : '';
+    const sortWhitelist = {
+      set_num: 'stats.set_num',
+      set_name: 'stats.set_name',
+      year: 'stats.year',
+      theme_name: 'stats.theme_name',
+      required_parts: 'stats.required_parts',
+      owned_matching_parts: 'stats.owned_matching_parts',
+      missing_parts: 'stats.missing_parts',
+      missing_lots: 'stats.missing_lots',
+      completeness_percentage: 'completeness_percentage',
+      is_buildable: 'is_buildable'
+    };
+
+    const sortBy = String(query.sortBy ?? '').trim().toLowerCase();
+    const sortColumnSql = sortWhitelist[sortBy] ?? 'stats.missing_parts';
+    const sortDirSql = String(query.sortDir ?? '').trim().toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+    const countSql = `
+      SELECT COUNT(*) AS total
+      FROM (${statsSql}) stats
+      ${filteredWhere}
+    `;
+
+    const dataSql = `
+      SELECT
+        stats.*,
+        CASE
+          WHEN stats.required_parts <= 0 THEN 0
+          ELSE ROUND((stats.owned_matching_parts / stats.required_parts) * 100, 1)
+        END AS completeness_percentage,
+        CASE WHEN stats.missing_parts = 0 THEN 1 ELSE 0 END AS is_buildable
+      FROM (${statsSql}) stats
+      ${filteredWhere}
+      ORDER BY ${sortColumnSql} ${sortDirSql}, stats.set_num ASC
+      LIMIT ? OFFSET ?
+    `;
+
+    const [countRows, dataRows] = await Promise.all([
+      database.query(countSql, baseParams),
+      database.query(dataSql, [...baseParams, pageSize, offset])
+    ]);
+
+    const total = Number(countRows?.[0]?.total ?? 0);
+    const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
+
+    const response = {
+      data: dataRows,
+      page,
+      pageSize,
+      total,
+      totalPages
+    };
+
+    setBuildableCache(cacheKey, response);
+    return response;
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
 async function addWithParts(payload) {
   try {
     const userSet = { ...(payload?.user_set ?? {}) };
@@ -710,6 +917,7 @@ export default {
   add,
   addWithParts,
   getSetParts,
+  getBuildableCatalog,
   getBreakdown,
   updateBreakdownPart,
   deleteBreakdownPart,

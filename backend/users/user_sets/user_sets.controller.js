@@ -59,6 +59,25 @@ function getSetParts(request, response) {
     });
 }
 
+function getBuildableSetsCatalog(request, response) {
+  const { userId, isAdmin } = authContext(request);
+  const targetUserId = Number(request.query?.user_id);
+  const viewerUserId = Number.isFinite(targetUserId) && targetUserId > 0 && isAdmin
+    ? targetUserId
+    : userId;
+
+  userSetModel.getBuildableCatalog({
+    ...request.query,
+    viewer_user_id: viewerUserId
+  })
+    .then((result) => {
+      response.json(result);
+    })
+    .catch((error) => {
+      response.status(500).json({ error: error?.message || 'Failed to retrieve buildable sets catalog' });
+    });
+}
+
 function addUserSetWithParts(request, response) {
   const { userId, isAdmin } = authContext(request);
   const payload = request.body ?? {};
@@ -300,6 +319,7 @@ export {
   getUserSets,
   getUserSet,
   getSetParts,
+  getBuildableSetsCatalog,
   getUserSetBreakdown,
   updateUserSetBreakdownPart,
   deleteUserSetBreakdownPart,

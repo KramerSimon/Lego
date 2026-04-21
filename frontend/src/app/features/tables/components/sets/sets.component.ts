@@ -42,6 +42,7 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 })
 export class SetsComponent implements OnDestroy {
   readonly config = SETS_CONFIG;
+  private readonly instructionSearchBaseUrl = 'https://www.lego.com/en-us/service/building-instructions/search-results?searchString=';
   private readonly setsTableApi = inject(SetsTableApiService);
   private readonly themesApi = inject(ThemesApiService);
   private readonly setsApi = inject(SetsApiService);
@@ -292,6 +293,14 @@ export class SetsComponent implements OnDestroy {
     return null;
   }
 
+  instructionSearchUrl(setNumValue: unknown): string {
+    const normalized = this.normalizeSetNumForInstructionSearch(setNumValue);
+    if (!normalized) {
+      return this.instructionSearchBaseUrl;
+    }
+    return `${this.instructionSearchBaseUrl}${encodeURIComponent(normalized)}`;
+  }
+
   private reload(): void {
     this.loading.set(true);
     const search = this.searchTerm().trim();
@@ -465,5 +474,13 @@ export class SetsComponent implements OnDestroy {
     ]);
 
     return allowedColumns.has(column) ? column : null;
+  }
+
+  private normalizeSetNumForInstructionSearch(setNumValue: unknown): string {
+    const raw = String(setNumValue ?? '').trim();
+    if (!raw) {
+      return '';
+    }
+    return raw.replace(/-\d+$/, '');
   }
 }

@@ -42,6 +42,8 @@
 			</div>
 		</div>
 
+		<p class="results-count" *ngIf="!loading()">{{ total() }} results</p>
+
 		<div class="loader" *ngIf="loading()">
 			<mat-spinner diameter="36"></mat-spinner>
 		</div>
@@ -97,6 +99,16 @@
 							</div>
 
 							<h3>{{ 'Parts for' | t }} {{ row['set_num'] }}</h3>
+							<a
+								mat-stroked-button
+								class="instruction-link"
+								[href]="instructionSearchUrl(row['set_num'])"
+								target="_blank"
+								rel="noopener"
+								(click)="$event.stopPropagation()"
+							>
+								{{ 'Open Instructions' | t }}
+							</a>
 
 							<div class="loader" *ngIf="expandedLoading()">
 								<mat-spinner diameter="28"></mat-spinner>

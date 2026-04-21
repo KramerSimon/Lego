@@ -3,6 +3,7 @@ import {
 	getUserSets,
 	getUserSet,
 	getSetParts,
+	getBuildableSetsCatalog,
 	getUserSetBreakdown,
 	updateUserSetBreakdownPart,
 	deleteUserSetBreakdownPart,
@@ -13,6 +14,7 @@ import {
 } from './user_sets.controller.js';
 const router = express.Router();
 router.get('/', getUserSets);
+router.get('/buildable', getBuildableSetsCatalog);
 router.get('/set-parts/:setNum', getSetParts);
 router.get('/:id/breakdown', getUserSetBreakdown);
 router.put('/:id/parts/:kind/:rowId', updateUserSetBreakdownPart);

@@ -3,6 +3,7 @@
   background: var(--lego-card-bg);
   border: 1px solid var(--lego-card-border);
   box-shadow: 0 6px 22px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
 }
 
 mat-card-title {
@@ -14,28 +15,39 @@ mat-card-subtitle {
 }
 
 .search-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(420px, 7fr) minmax(220px, 2fr) auto;
   gap: 10px;
-  align-items: flex-start;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 14px;
 }
 
 .search-field {
-  min-width: 280px;
-  flex: 1 1 420px;
+  min-width: 0;
 }
 
 .theme-field {
-  min-width: 220px;
-  flex: 0 1 280px;
+  min-width: 0;
 }
 
 .search-actions {
   display: flex;
   gap: 8px;
   align-items: center;
-  padding-top: 4px;
+  justify-content: flex-end;
+}
+
+.search-actions button {
+  min-height: 40px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.results-count {
+  margin: 2px 0 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--lego-ink-soft);
 }
 
 :host ::ng-deep .search-bar .mat-mdc-form-field {
@@ -161,8 +173,11 @@ mat-card-subtitle {
   width: 100%;
   overflow-x: auto;
   border: 1px solid var(--lego-card-border);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--lego-card-bg);
+  overflow: hidden;
+  isolation: isolate;
+  margin-top: 2px;
 }
 
 table.mat-mdc-table {
@@ -176,6 +191,8 @@ th.mat-mdc-header-cell {
   font-weight: 700;
   background: var(--lego-table-head-bg);
   border-bottom: 1px solid var(--lego-border-strong);
+  padding-top: 14px;
+  padding-bottom: 14px;
 }
 
 .sort-toggle {
@@ -208,14 +225,20 @@ th.mat-mdc-header-cell {
 td.mat-mdc-cell {
   color: var(--lego-form-ink);
   border-bottom: 1px solid var(--lego-table-border);
+  padding-top: 13px;
+  padding-bottom: 13px;
 }
 
 tr.set-row {
   cursor: pointer;
 }
 
+tr.set-row:nth-of-type(even) {
+  background: color-mix(in srgb, var(--lego-table-row-alt) 82%, var(--lego-card-bg));
+}
+
 tr.set-row:hover {
-  background: var(--lego-table-row-hover);
+  background: color-mix(in srgb, var(--lego-table-row-hover) 92%, var(--lego-card-bg));
 }
 
 tr.detail-row {
@@ -272,6 +295,10 @@ tr.detail-row {
   color: var(--lego-form-ink);
 }
 
+.instruction-link {
+  margin-bottom: 10px;
+}
+
 .muted {
   color: var(--lego-ink-soft);
 }
@@ -323,19 +350,19 @@ mat-paginator {
 
 @media (max-width: 800px) {
   .search-bar {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     gap: 8px;
   }
 
   .search-field,
   .theme-field {
     min-width: 100%;
-    flex: 1 1 100%;
   }
 
   .search-actions {
     width: 100%;
     padding-top: 0;
+    justify-content: flex-start;
   }
 
   .search-actions button {
