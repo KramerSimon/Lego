@@ -1,8 +1,8 @@
 import database from '../../database.js';
 const tableName = 'user_sets';
 const idColumn = 'user_set_id';
-const BUILDABLE_CACHE_TTL_MS = 15000;
-const BUILDABLE_CACHE_MAX_ENTRIES = 200;
+const BUILDABLE_CACHE_TTL_MS = 10 * 60 * 1000;
+const BUILDABLE_CACHE_MAX_ENTRIES = 5000;
 const buildableCatalogCache = new Map();
 const CONDITION_TAGS = new Set([
   'sealed',
@@ -705,6 +705,92 @@ async function getBuildableCatalog(query = {}) {
   }
 }
 
+async function warmBuildableCatalogCache(options = {}) {
+  const rawVariants = Array.isArray(options.queryVariants) ? options.queryVariants : [];
+  const queryVariants = rawVariants.length > 0
+    ? rawVariants
+    : [
+      // Matches buildable tab quick count.
+      { page: 1, pageSize: 1, buildableOnly: 'true' },
+      // Matches buildable tab main listing defaults.
+      { page: 1, pageSize: 8, sortBy: 'completeness_percentage', sortDir: 'desc' },
+      { page: 1, pageSize: 15, buildableOnly: 'false', sortBy: 'completeness_percentage', sortDir: 'desc' },
+      // Matches build mode set picker.
+      { page: 1, pageSize: 20, buildableOnly: 'true', sortBy: 'completeness_percentage', sortDir: 'desc' }
+    ];
+  const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+
+  const userRows = await database.query(`
+    SELECT DISTINCT up.user_id
+    FROM user_parts up
+    WHERE up.user_id IS NOT NULL
+    ORDER BY up.user_id ASC
+  `);
+
+  const userIds = (userRows ?? [])
+    .map((row) => Number(row?.user_id))
+    .filter((userId) => Number.isFinite(userId) && userId > 0);
+
+  const totalUsers = userIds.length;
+  const totalSteps = totalUsers * queryVariants.length;
+  let processedUsers = 0;
+  let processedSteps = 0;
+  let warmedUsers = 0;
+  let failedUsers = 0;
+
+  if (onProgress) {
+    onProgress({
+      processedUsers,
+      totalUsers,
+      processedSteps,
+      totalSteps,
+      warmedUsers,
+      failedUsers
+    });
+  }
+
+  for (const userId of userIds) {
+    let userFailed = false;
+    for (const variant of queryVariants) {
+      try {
+        await getBuildableCatalog({
+          viewer_user_id: userId,
+          ...variant
+        });
+      } catch (_error) {
+        userFailed = true;
+      } finally {
+        processedSteps += 1;
+        if (onProgress) {
+          onProgress({
+            processedUsers,
+            totalUsers,
+            processedSteps,
+            totalSteps,
+            warmedUsers,
+            failedUsers,
+            userId
+          });
+        }
+      }
+    }
+
+    if (userFailed) {
+      failedUsers += 1;
+    } else {
+      warmedUsers += 1;
+    }
+
+    processedUsers += 1;
+  }
+
+  return {
+    totalUsers,
+    warmedUsers,
+    failedUsers
+  };
+}
+
 async function addWithParts(payload) {
   try {
     const userSet = { ...(payload?.user_set ?? {}) };
@@ -918,6 +1004,7 @@ export default {
   addWithParts,
   getSetParts,
   getBuildableCatalog,
+  warmBuildableCatalogCache,
   getBreakdown,
   updateBreakdownPart,
   deleteBreakdownPart,

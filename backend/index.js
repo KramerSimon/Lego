@@ -22,6 +22,7 @@ import userMissingPartsRouter from './users/user_missing_parts/user_missing_part
 import userSetsRouter from './users/user_sets/user_sets.router.js';
 import authRouter from './auth/auth.router.js';
 import { authenticateRequest, requireAdmin } from './auth/auth.middleware.js';
+import userSetModel from './users/user_sets/user_sets.model.js';
 import openApiSpec from './openapi.js';
 const app = express();
 app.use(cors());
@@ -160,10 +161,61 @@ async function ensureSchema() {
   await database.query('UPDATE users SET is_admin = 1 WHERE LOWER(username) = ?', ['simon']);
 }
 
+function renderStartupLoadingBar(label, completed, total) {
+  const safeTotal = Math.max(1, Number(total) || 0);
+  const safeCompleted = Math.max(0, Math.min(Number(completed) || 0, safeTotal));
+  const width = 30;
+  const ratio = safeCompleted / safeTotal;
+  const filled = Math.round(width * ratio);
+  const bar = `${'#'.repeat(filled)}${'-'.repeat(Math.max(0, width - filled))}`;
+  const percent = Math.round(ratio * 100);
+  process.stdout.write(`\r${label} [${bar}] ${safeCompleted}/${safeTotal} ${percent}%`);
+  if (safeCompleted >= safeTotal) {
+    process.stdout.write('\n');
+  }
+}
+
+function startBuildableSetsWarmup() {
+  const startedAt = Date.now();
+  console.log('Starting buildable sets warm-up in background...');
+
+  userSetModel.warmBuildableCatalogCache({
+    onProgress: ({ processedSteps, totalSteps, processedUsers, totalUsers }) => {
+      const completed = Number.isFinite(Number(processedSteps))
+        ? Number(processedSteps)
+        : Number(processedUsers);
+      const total = Number.isFinite(Number(totalSteps))
+        ? Number(totalSteps)
+        : Number(totalUsers);
+
+      if (total <= 0) {
+        return;
+      }
+      renderStartupLoadingBar('Buildable sets', completed, total);
+    }
+  })
+    .then(({ totalUsers, warmedUsers, failedUsers }) => {
+      const elapsedMs = Date.now() - startedAt;
+      if (totalUsers === 0) {
+        console.log('Buildable sets warm-up skipped: no users with parts found.');
+        return;
+      }
+      if (failedUsers > 0) {
+        console.warn(`Buildable sets warm-up completed with warnings in ${elapsedMs}ms (warmed: ${warmedUsers}, failed: ${failedUsers}).`);
+        return;
+      }
+      console.log(`Buildable sets warm-up completed in ${elapsedMs}ms (warmed: ${warmedUsers}).`);
+    })
+    .catch((error) => {
+      console.warn('Buildable sets warm-up failed:', error?.message || error);
+    });
+}
+
 ensureSchema()
   .then(() => {
     app.listen(3000, () => {
       console.log('Server is running on port 3000');
+      startBuildableSetsWarmup();
     });
   })
   .catch((error) => {
