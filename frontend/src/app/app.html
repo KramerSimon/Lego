@@ -51,6 +51,10 @@
 					<mat-icon>manage_accounts</mat-icon>
 					<span>{{ 'Account Settings' | t }}</span>
 				</button>
+				<button mat-menu-item type="button" *ngIf="isSimonUser(user)" (click)="sendTestEmailFromToolbar(user)">
+					<mat-icon>mail</mat-icon>
+					<span>{{ 'Send Test Email' | t }}</span>
+				</button>
 				<button mat-menu-item type="button" *ngIf="user.is_admin" (click)="openAdminTables()">
 					<mat-icon>tune</mat-icon>
 					<span>{{ 'Admin Tables' | t }}</span>
@@ -62,6 +66,11 @@
 			</mat-menu>
 		</ng-container>
 	</mat-toolbar>
+
+	<div class="toolbar-notice" *ngIf="testEmailNotice() as notice" [class.error]="notice.type === 'error'">
+		<mat-icon>{{ notice.type === 'error' ? 'error' : 'mark_email_read' }}</mat-icon>
+		<span>{{ notice.message }}</span>
+	</div>
 
 	<ng-container *ngIf="auth.user() as user; else loginOnly">
 		<div class="content-shell">

@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, register, me, completeOnboarding, verifyEmail, verifyEmailFromLink, resendVerification, verifyTwoFactor, resendTwoFactor } from './auth.controller.js';
+import { login, register, me, completeOnboarding, verifyEmail, verifyEmailFromLink, resendVerification, verifyTwoFactor, resendTwoFactor, sendTestEmail } from './auth.controller.js';
 
 const router = express.Router();
 
@@ -10,6 +10,7 @@ router.post('/register', register);
 router.post('/verify-email', verifyEmail);
 router.get('/verify-email', verifyEmailFromLink);
 router.post('/resend-verification', resendVerification);
+router.post('/test-email', sendTestEmail);
 router.get('/me', me);
 router.post('/onboarding/complete', completeOnboarding);
 

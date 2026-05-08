@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken';
+import env from '../config/env.js';
 
 function getJwtSecret() {
-  return process.env.AUTH_JWT_SECRET || 'lego-dev-secret-change-me';
+  return env.authJwtSecret;
 }
 
 function authenticateRequest(request, response, next) {

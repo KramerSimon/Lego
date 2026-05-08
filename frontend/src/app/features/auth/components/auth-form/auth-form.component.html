@@ -8,11 +8,25 @@
   <mat-card-content>
     <div *ngIf="auth.user() as user; else authForms" class="auth-state">
       <p><strong>{{ 'Logged in as:' | t }}</strong> {{ user.username }} (ID: {{ user.user_id }})</p>
-      <button mat-stroked-button type="button" (click)="auth.logout()">
-        <mat-icon>logout</mat-icon>
-        {{ 'Logout' | t }}
-      </button>
+      <div class="auth-state-actions">
+        <button
+          *ngIf="isSimon(user)"
+          mat-stroked-button
+          type="button"
+          (click)="sendTestEmail()"
+          [disabled]="auth.authenticating()"
+        >
+          <mat-icon>mail</mat-icon>
+          {{ 'Send Test Email' | t }}
+        </button>
+        <button mat-stroked-button type="button" (click)="auth.logout()">
+          <mat-icon>logout</mat-icon>
+          {{ 'Logout' | t }}
+        </button>
+      </div>
     </div>
+    <p *ngIf="testEmailStatus()" class="auth-success">{{ testEmailStatus() }}</p>
+    <p *ngIf="error()" class="auth-error">{{ error() }}</p>
 
     <ng-template #authForms>
       <div class="auth-mode-switch" role="group" [attr.aria-label]="'Authentication mode' | t">

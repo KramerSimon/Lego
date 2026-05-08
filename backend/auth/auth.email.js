@@ -1,28 +1,16 @@
 import nodemailer from 'nodemailer';
 import fs from 'fs';
-import path from 'path';
+import env from '../config/env.js';
 
-const DEFAULT_SMTP_HOST = 'smtp-relay.brevo.com';
-const DEFAULT_SMTP_PORT = 587;
-const DEFAULT_SMTP_USER = 'a814c9001@smtp-brevo.com';
-const DEFAULT_FROM_ADDRESS = 'noreply@legobrickbuilder.it';
-const BREVO_API_ENDPOINT = 'https://api.brevo.com/v3/smtp/email';
-
-function resolveDefaultKeyFilePath() {
-  return path.resolve(process.cwd(), '..', 'documentation', 'smtp-key.txt');
-}
-
-function resolveDefaultBrevoApiKeyPath() {
-  return path.resolve(process.cwd(), '..', 'documentation', 'api-key.txt');
-}
+const BREVO_API_ENDPOINT = env.brevoApiEndpoint;
 
 function resolveSmtpPassword() {
-  const envPass = String(process.env.SMTP_PASS ?? '').trim();
+  const envPass = String(env.smtpPass ?? '').trim();
   if (envPass) {
     return envPass;
   }
 
-  const keyFilePath = String(process.env.SMTP_PASS_FILE ?? resolveDefaultKeyFilePath()).trim();
+  const keyFilePath = String(env.smtpPassFile ?? '').trim();
   if (!keyFilePath) {
     return '';
   }
@@ -35,12 +23,12 @@ function resolveSmtpPassword() {
 }
 
 function resolveBrevoApiKey() {
-  const envApiKey = String(process.env.BREVO_API_KEY ?? '').trim();
+  const envApiKey = String(env.brevoApiKey ?? '').trim();
   if (envApiKey) {
     return envApiKey;
   }
 
-  const keyFilePath = String(process.env.BREVO_API_KEY_FILE ?? resolveDefaultBrevoApiKeyPath()).trim();
+  const keyFilePath = String(env.brevoApiKeyFile ?? '').trim();
   if (!keyFilePath) {
     return '';
   }
@@ -54,11 +42,11 @@ function resolveBrevoApiKey() {
 }
 
 function getSmtpConfig() {
-  const host = String(process.env.SMTP_HOST ?? DEFAULT_SMTP_HOST).trim();
-  const port = Number(process.env.SMTP_PORT ?? DEFAULT_SMTP_PORT);
-  const user = String(process.env.SMTP_USER ?? DEFAULT_SMTP_USER).trim();
+  const host = String(env.smtpHost ?? '').trim();
+  const port = Number(env.smtpPort);
+  const user = String(env.smtpUser ?? '').trim();
   const pass = resolveSmtpPassword();
-  const secure = String(process.env.SMTP_SECURE ?? '').trim().toLowerCase() === 'true';
+  const secure = Boolean(env.smtpSecure);
 
   if (!host || !Number.isFinite(port) || !user || !pass) {
     throw new Error('SMTP configuration is incomplete');
@@ -69,11 +57,11 @@ function getSmtpConfig() {
 }
 
 function getFromAddress() {
-  const fromAddress = String(process.env.SMTP_FROM ?? '').trim();
+  const fromAddress = String(env.smtpFrom ?? '').trim();
   if (fromAddress) {
     return fromAddress;
   }
-  return DEFAULT_FROM_ADDRESS;
+  return 'noreply@legobrickbuilder.it';
 }
 
 async function sendVerificationEmailViaBrevoApi({ to, username, verifyUrl }) {
@@ -216,5 +204,23 @@ export async function sendTwoFactorCodeEmail({ to, username, code }) {
     textContent: 'Hi {username},\n\nYour verification code is: ' + safeCode + '\n\nThe code expires in 10 minutes.',
     htmlContent: `<p>Hi {username},</p><p>Your verification code is:</p><p style="font-size:20px;font-weight:bold;letter-spacing:2px;">${safeCode}</p><p>The code expires in 10 minutes.</p>`,
     logTag: '2fa'
+  });
+}
+
+export async function sendTestEmail({ to, username, subject, message }) {
+  const safeMessage = String(message ?? '').trim() || 'This is a backend test email.';
+  const htmlBody = safeMessage
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('\n', '<br/>');
+
+  await sendTransactionalEmail({
+    to,
+    username,
+    subject: String(subject ?? '').trim() || 'LEGO Backend Test Email',
+    textContent: 'Hi {username},\n\n' + safeMessage,
+    htmlContent: `<p>Hi {username},</p><p>${htmlBody}</p>`,
+    logTag: 'test'
   });
 }

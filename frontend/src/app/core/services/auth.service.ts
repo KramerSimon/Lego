@@ -9,6 +9,8 @@ import {
   AuthRegisterResponse,
   AuthResendVerificationPayload,
   AuthResendVerificationResponse,
+  AuthTestEmailPayload,
+  AuthTestEmailResponse,
   AuthResendTwoFactorPayload,
   AuthResendTwoFactorResponse,
   AuthUser
@@ -190,6 +192,22 @@ export class AuthService {
     );
   }
 
+  sendTestEmail(payload: AuthTestEmailPayload = {}) {
+    this.authenticating.set(true);
+    this.authError.set(null);
+    return this.sendTestEmailRequest(payload).pipe(
+      tap(() => {
+        this.authenticating.set(false);
+      }),
+      map(() => true),
+      catchError((error: unknown) => {
+        this.authenticating.set(false);
+        this.authError.set(this.extractApiError(error));
+        return of(false);
+      })
+    );
+  }
+
   cancelTwoFactor(): void {
     this.pendingTwoFactorToken.set(null);
     this.pendingTwoFactorIdentifier.set(null);
@@ -277,6 +295,10 @@ export class AuthService {
 
   private resendTwoFactorRequest(payload: AuthResendTwoFactorPayload) {
     return this.apiHttp.post<AuthResendTwoFactorResponse>('auth/resend-2fa', payload);
+  }
+
+  private sendTestEmailRequest(payload: AuthTestEmailPayload) {
+    return this.apiHttp.post<AuthTestEmailResponse>('auth/test-email', payload);
   }
 
   private completeOnboardingGuideRequest() {

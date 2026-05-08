@@ -1,10 +1,12 @@
 import mysql from 'mysql';
+import env from './config/env.js';
 const connectionProperties = {
-  host: 'localhost',
-  user: 'root',
-  password: 'root',
-  database: 'lego',
-  connectionLimit: 10
+  host: env.dbHost,
+  port: env.dbPort,
+  user: env.dbUser,
+  password: env.dbPassword,
+  database: env.dbName,
+  connectionLimit: env.dbConnectionLimit
 };
 class Database {
   constructor() {

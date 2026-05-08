@@ -2,7 +2,8 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import database from '../database.js';
-import { sendTwoFactorCodeEmail, sendVerificationEmail } from './auth.email.js';
+import env from '../config/env.js';
+import { sendTestEmail, sendTwoFactorCodeEmail, sendVerificationEmail } from './auth.email.js';
 
 const TOKEN_TTL = '12h';
 const EMAIL_VERIFICATION_TTL_HOURS = 24;
@@ -10,7 +11,7 @@ const TWO_FACTOR_CODE_TTL_MINUTES = 10;
 const TWO_FACTOR_CHALLENGE_TTL = '10m';
 
 function getJwtSecret() {
-  return process.env.AUTH_JWT_SECRET || 'lego-dev-secret-change-me';
+  return env.authJwtSecret;
 }
 
 function sanitizeUser(row) {
@@ -46,7 +47,7 @@ function hashVerificationToken(token) {
 }
 
 function buildVerificationUrl(rawToken) {
-  const baseUrl = String(process.env.EMAIL_VERIFICATION_BASE_URL ?? 'http://localhost:3000').trim();
+  const baseUrl = env.emailVerificationBaseUrl;
   return `${baseUrl.replace(/\/$/, '')}/auth/verify-email?token=${encodeURIComponent(rawToken)}`;
 }
 
@@ -423,20 +424,22 @@ async function register(payload = {}) {
   }
 
   const userId = Number(insertResult?.insertId ?? 0);
+  const verifyUrl = buildVerificationUrl(verificationToken);
 
-  try {
-    await sendVerificationEmail({
+  // Do not block registration completion on external email provider latency.
+  Promise.resolve()
+    .then(() => sendVerificationEmail({
       to: email,
       username,
-      verifyUrl: buildVerificationUrl(verificationToken)
+      verifyUrl
+    }))
+    .catch((error) => {
+      console.error('[auth] Registration verification email failed:', {
+        userId,
+        email,
+        error: error?.message || error
+      });
     });
-  } catch (error) {
-    if (userId > 0) {
-      await database.query('DELETE FROM users WHERE user_id = ? LIMIT 1', [userId]);
-    }
-    const reason = String(error?.message ?? '').trim();
-    throw new Error(`Failed to send verification email. ${reason || 'Please try again.'}`);
-  }
 
   return {
     requires_email_verification: true,
@@ -548,4 +551,57 @@ async function completeOnboarding(token) {
   return getMe(token);
 }
 
-export default { login, register, getMe, completeOnboarding, verifyEmailToken, resendVerificationEmail, verifyTwoFactor, resendTwoFactor };
+async function sendTestEmailForSimonOnly(token, payload = {}) {
+  const decoded = verifyToken(token);
+  const rows = await database.query(
+    'SELECT user_id, username, email FROM users WHERE user_id = ? LIMIT 1',
+    [decoded.user_id]
+  );
+  const user = rows?.[0];
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  if (String(user.username ?? '').trim().toLowerCase() !== 'simon') {
+    throw new Error('Only simon can send test emails');
+  }
+
+  const recipient = String(payload?.to ?? user.email ?? '').trim();
+  if (!recipient) {
+    throw new Error('Recipient email is required');
+  }
+
+  const subject = String(payload?.subject ?? '').trim() || 'LEGO Backend Test Email';
+  const message = String(payload?.message ?? '').trim() || 'This is a backend test email.';
+
+  try {
+    await sendTestEmail({
+      to: recipient,
+      username: user.username,
+      subject,
+      message
+    });
+  } catch (error) {
+    const reason = String(error?.message ?? '').trim();
+    throw new Error(`Failed to send test email. ${reason || 'Please try again.'}`);
+  }
+
+  return {
+    sent: true,
+    to: recipient,
+    message: 'Test email sent.'
+  };
+}
+
+export default {
+  login,
+  register,
+  getMe,
+  completeOnboarding,
+  verifyEmailToken,
+  resendVerificationEmail,
+  verifyTwoFactor,
+  resendTwoFactor,
+  sendTestEmailForSimonOnly
+};

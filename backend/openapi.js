@@ -1,3 +1,5 @@
+import env from './config/env.js';
+
 const openApiSpec = {
   openapi: '3.0.3',
   info: {
@@ -7,7 +9,7 @@ const openApiSpec = {
   },
   servers: [
     {
-      url: 'http://localhost:3000'
+      url: env.openApiServerUrl
     }
   ],
   tags: [

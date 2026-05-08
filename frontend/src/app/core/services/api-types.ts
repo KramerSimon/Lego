@@ -64,6 +64,18 @@ export interface AuthResendVerificationResponse {
   message: string;
 }
 
+export interface AuthTestEmailPayload {
+  to?: string;
+  subject?: string;
+  message?: string;
+}
+
+export interface AuthTestEmailResponse {
+  sent: boolean;
+  to: string;
+  message: string;
+}
+
 export interface AuthAccountResponse {
   user: AuthUser;
 }

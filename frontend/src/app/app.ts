@@ -133,6 +133,7 @@ export class App {
   protected readonly continueBuild = this.buildSession.continueBuild;
   protected readonly hasContinueBuild = this.buildSession.hasContinueBuild;
   protected readonly workflowExpanded = signal(true);
+  protected readonly testEmailNotice = signal<{ type: 'success' | 'error'; message: string } | null>(null);
   protected readonly workflowSteps = [1, 2, 3, 4] as const;
   protected readonly currentWorkflowStep = computed(() => {
     const view = this.mainView();
@@ -152,6 +153,7 @@ export class App {
     { code: 'it', label: 'Italian' },
     { code: 'de', label: 'German' }
   ];
+  private testEmailNoticeTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     const savedTheme = this.readSavedTheme();
@@ -200,6 +202,25 @@ export class App {
 
   protected openGuide(): void {
     this.onboardingGuide.start(false);
+  }
+
+  protected isSimonUser(user: AuthUser | null | undefined): boolean {
+    return String(user?.username ?? '').trim().toLowerCase() === 'simon';
+  }
+
+  protected sendTestEmailFromToolbar(user: AuthUser): void {
+    if (!this.isSimonUser(user) || this.auth.authenticating()) {
+      return;
+    }
+
+    this.testEmailNotice.set(null);
+    this.auth.sendTestEmail({ to: user.email }).subscribe((ok) => {
+      if (!ok) {
+        this.setTestEmailNotice('Failed to send test email.', 'error');
+        return;
+      }
+      this.setTestEmailNotice('Test email sent successfully.', 'success');
+    });
   }
 
   protected openPickABrick(): void {
@@ -628,5 +649,16 @@ export class App {
       return 'Apri la panoramica pezzi per capire meglio la tua collezione.';
     }
     return 'Open My Parts overview to understand your inventory shape.';
+  }
+
+  private setTestEmailNotice(message: string, type: 'success' | 'error'): void {
+    this.testEmailNotice.set({ message, type });
+    if (this.testEmailNoticeTimer) {
+      clearTimeout(this.testEmailNoticeTimer);
+    }
+    this.testEmailNoticeTimer = setTimeout(() => {
+      this.testEmailNotice.set(null);
+      this.testEmailNoticeTimer = null;
+    }, 5000);
   }
 }

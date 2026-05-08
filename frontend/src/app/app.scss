@@ -237,6 +237,25 @@
 	flex: 1 1 auto;
 }
 
+.toolbar-notice {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	margin: -8px 0 14px;
+	padding: 8px 12px;
+	border-radius: 10px;
+	border: 1px solid #bde3c8;
+	background: #eefaf2;
+	color: #1f6d3e;
+	font-weight: 600;
+}
+
+.toolbar-notice.error {
+	border-color: #efc4c4;
+	background: #fff2f2;
+	color: #a12d2d;
+}
+
 .auth-gate {
 	max-width: 760px;
 }

@@ -31,6 +31,7 @@ export class AuthFormComponent {
 
   readonly mode = signal<'login' | 'register'>('login');
   readonly error = signal<string | null>(null);
+  readonly testEmailStatus = signal<string | null>(null);
 
   readonly loginForm = this.fb.group({
     identifier: this.fb.control('', [Validators.required]),
@@ -108,6 +109,29 @@ export class AuthFormComponent {
     this.auth.cancelTwoFactor();
     this.twoFactorForm.reset({ code: '' });
     this.error.set(null);
+  }
+
+  isSimon(user: { username?: string | null }): boolean {
+    return String(user?.username ?? '').trim().toLowerCase() === 'simon';
+  }
+
+  sendTestEmail(): void {
+    const user = this.auth.user();
+    if (!user || !this.isSimon(user) || this.auth.authenticating()) {
+      return;
+    }
+
+    this.error.set(null);
+    this.auth.authError.set(null);
+    this.testEmailStatus.set(null);
+
+    this.auth.sendTestEmail({ to: user.email }).subscribe((ok) => {
+      if (!ok) {
+        this.error.set(this.auth.authError() ?? 'Failed to send test email.');
+        return;
+      }
+      this.testEmailStatus.set('Test email sent successfully.');
+    });
   }
 
   private submitLogin(): void {

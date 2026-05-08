@@ -211,4 +211,52 @@ function completeOnboarding(request, response) {
     });
 }
 
-export { login, register, me, completeOnboarding, verifyEmail, verifyEmailFromLink, resendVerification, verifyTwoFactor, resendTwoFactor };
+function sendTestEmail(request, response) {
+  const token = getBearerToken(request);
+  if (!token) {
+    response.status(401).json({ error: 'Missing bearer token' });
+    return;
+  }
+
+  authModel.sendTestEmailForSimonOnly(token, request.body ?? {})
+    .then((result) => {
+      response.json(result);
+    })
+    .catch((error) => {
+      const message = error?.message || 'Unable to send test email';
+      if (message === 'Missing token' || message === 'invalid token' || message === 'jwt malformed' || message === 'jwt expired') {
+        response.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+      if (message === 'User not found') {
+        response.status(404).json({ error: message });
+        return;
+      }
+      if (message === 'Only simon can send test emails') {
+        response.status(403).json({ error: message });
+        return;
+      }
+      if (message === 'Recipient email is required') {
+        response.status(400).json({ error: message });
+        return;
+      }
+      if (message.startsWith('Failed to send test email.')) {
+        response.status(502).json({ error: message });
+        return;
+      }
+      response.status(500).json({ error: message });
+    });
+}
+
+export {
+  login,
+  register,
+  me,
+  completeOnboarding,
+  verifyEmail,
+  verifyEmailFromLink,
+  resendVerification,
+  verifyTwoFactor,
+  resendTwoFactor,
+  sendTestEmail
+};

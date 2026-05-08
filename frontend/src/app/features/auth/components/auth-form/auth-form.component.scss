@@ -37,6 +37,19 @@
   flex-wrap: wrap;
 }
 
+.auth-state-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.auth-success {
+  margin-top: 10px;
+  color: #19784d;
+  font-weight: 600;
+}
+
 .auth-error {
   margin-top: 10px;
   color: #b83333;
@@ -75,5 +88,10 @@
   .auth-state {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .auth-state-actions,
+  .auth-state-actions button {
+    width: 100%;
   }
 }

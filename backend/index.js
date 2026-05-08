@@ -23,6 +23,7 @@ import userSetsRouter from './users/user_sets/user_sets.router.js';
 import authRouter from './auth/auth.router.js';
 import { authenticateRequest, requireAdmin } from './auth/auth.middleware.js';
 import userSetModel from './users/user_sets/user_sets.model.js';
+import env from './config/env.js';
 import openApiSpec from './openapi.js';
 const app = express();
 app.use(cors());
@@ -175,7 +176,16 @@ function renderStartupLoadingBar(label, completed, total) {
   }
 }
 
+const BUILDABLE_WARMUP_INTERVAL_MS = 15 * 60 * 1000;
+let buildableWarmupInProgress = false;
+
 function startBuildableSetsWarmup() {
+  if (buildableWarmupInProgress) {
+    console.log('Buildable sets warm-up skipped: previous run still in progress.');
+    return;
+  }
+
+  buildableWarmupInProgress = true;
   const startedAt = Date.now();
   console.log('Starting buildable sets warm-up in background...');
 
@@ -208,14 +218,19 @@ function startBuildableSetsWarmup() {
     })
     .catch((error) => {
       console.warn('Buildable sets warm-up failed:', error?.message || error);
+    })
+    .finally(() => {
+      buildableWarmupInProgress = false;
     });
 }
 
 ensureSchema()
   .then(() => {
-    app.listen(3000, () => {
-      console.log('Server is running on port 3000');
+    app.listen(env.port, () => {
+      console.log(`Server is running on port ${env.port}`);
       startBuildableSetsWarmup();
+      setInterval(startBuildableSetsWarmup, BUILDABLE_WARMUP_INTERVAL_MS);
+      console.log('Buildable sets warm-up scheduler started (every 15 minutes).');
     });
   })
   .catch((error) => {
