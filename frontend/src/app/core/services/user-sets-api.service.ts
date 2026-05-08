@@ -53,6 +53,16 @@ export class UserSetsApiService {
     return this.apiHttp.post<UserSetWithPartsResult>('user_sets/with-parts', payload);
   }
 
+  updateUserSet(
+    userSetId: number,
+    payload: {
+      condition_public?: string | null;
+      purchase_price?: number | null;
+    }
+  ): Observable<Record<string, unknown>> {
+    return this.apiHttp.put<Record<string, unknown>>(`user_sets/${userSetId}`, payload);
+  }
+
   getBreakdown(userSetId: number): Observable<UserSetBreakdownResponse> {
     return this.apiHttp.get<UserSetBreakdownResponse>(`user_sets/${userSetId}/breakdown`);
   }

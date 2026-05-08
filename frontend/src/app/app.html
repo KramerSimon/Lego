@@ -82,29 +82,6 @@
 						<p>{{ 'Plan builds, track missing pieces, and browse your LEGO catalog in one place.' | t }}</p>
 					</div>
 				</div>
-				<div class="global-search-shell" *ngIf="mainView() === 'dashboard' && !showSetCatalog()">
-					<mat-form-field appearance="outline" class="global-search-input">
-						<mat-label>{{ 'Global Search' | t }}</mat-label>
-						<mat-icon matPrefix>travel_explore</mat-icon>
-						<input
-							matInput
-							[ngModel]="globalSearchQuery()"
-							(ngModelChange)="globalSearchQuery.set($event)"
-							(keyup.enter)="runGlobalSearch()"
-							[placeholder]="'Search sets, parts, and missing items...' | t"
-						/>
-					</mat-form-field>
-					<mat-form-field appearance="outline" class="global-search-scope">
-						<mat-label>{{ 'In' | t }}</mat-label>
-						<mat-select [value]="globalSearchScope()" (valueChange)="globalSearchScope.set($event)">
-							<mat-option *ngFor="let option of globalSearchScopes" [value]="option.value">{{ option.label | t }}</mat-option>
-						</mat-select>
-					</mat-form-field>
-					<button mat-flat-button type="button" class="global-search-btn" (click)="runGlobalSearch()">
-						<mat-icon>search</mat-icon>
-						{{ 'Search' | t }}
-					</button>
-				</div>
 			</section>
 
 			<nav class="workspace-nav" data-guide-id="main-tabs">

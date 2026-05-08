@@ -364,6 +364,101 @@ async function getBreakdown(userSetId) {
   }
 }
 
+async function adjustMissingFromAvailableDelta(tx, userSetId, partNum, colorId, quantityDelta) {
+  const delta = Number(quantityDelta);
+  if (!Number.isFinite(delta) || delta === 0) {
+    return;
+  }
+
+  const missingColumns = await getTableColumns(tx, 'user_missing_parts');
+  const missingMeta = resolvePartTableMeta(
+    missingColumns,
+    'missing_part_id',
+    'quantity_missing',
+    ['user_set_id']
+  );
+
+  if (!missingMeta.idColumn || !missingMeta.quantityColumn || !missingMeta.linkColumn) {
+    return;
+  }
+
+  const missingRows = await tx.query(
+    `
+      SELECT ${missingMeta.idColumn} AS row_id, ${missingMeta.quantityColumn} AS quantity
+      FROM user_missing_parts
+      WHERE ${missingMeta.linkColumn} = ? AND part_num = ? AND color_id = ?
+      LIMIT 1
+    `,
+    [userSetId, partNum, colorId]
+  );
+  const existing = missingRows?.[0] ?? null;
+  const currentMissing = Math.max(0, Number(existing?.quantity ?? 0));
+
+  if (delta > 0) {
+    const nextMissing = currentMissing + delta;
+
+    if (existing) {
+      await tx.query(
+        `UPDATE user_missing_parts SET ${missingMeta.quantityColumn} = ? WHERE ${missingMeta.idColumn} = ? LIMIT 1`,
+        [nextMissing, existing.row_id]
+      );
+      return;
+    }
+
+    const insertPayload = {};
+    if (missingColumns.has('user_set_id')) {
+      insertPayload.user_set_id = userSetId;
+    }
+    if (missingColumns.has('part_num')) {
+      insertPayload.part_num = partNum;
+    }
+    if (missingColumns.has('color_id')) {
+      insertPayload.color_id = colorId;
+    }
+    if (missingColumns.has('quantity_missing')) {
+      insertPayload.quantity_missing = nextMissing;
+    }
+    if (missingColumns.has('quantity')) {
+      insertPayload.quantity = nextMissing;
+    }
+    if (missingColumns.has('partly_available')) {
+      insertPayload.partly_available = 1;
+    }
+    if (missingColumns.has('user_id')) {
+      const ownerRows = await tx.query(
+        `SELECT user_id FROM ${tableName} WHERE ${idColumn} = ? LIMIT 1`,
+        [userSetId]
+      );
+      const ownerUserId = Number(ownerRows?.[0]?.user_id);
+      if (Number.isFinite(ownerUserId) && ownerUserId > 0) {
+        insertPayload.user_id = ownerUserId;
+      }
+    }
+
+    const { sql, values } = buildInsertSql('user_missing_parts', insertPayload);
+    await tx.query(sql, values);
+    return;
+  }
+
+  if (!existing) {
+    return;
+  }
+
+  const nextMissing = Math.max(0, currentMissing + delta);
+  if (nextMissing <= 0) {
+    await tx.query(
+      `DELETE FROM user_missing_parts WHERE ${missingMeta.idColumn} = ? LIMIT 1`,
+      [existing.row_id]
+    );
+    return;
+  }
+
+  await tx.query(
+    `UPDATE user_missing_parts SET ${missingMeta.quantityColumn} = ? WHERE ${missingMeta.idColumn} = ? LIMIT 1`,
+    [nextMissing, existing.row_id]
+  );
+}
+
 async function updateBreakdownPart(userSetId, kind, rowId, quantity) {
   try {
     return database.withTransaction(async (tx) => {
@@ -382,6 +477,22 @@ async function updateBreakdownPart(userSetId, kind, rowId, quantity) {
         throw new Error(`Unsupported ${table} schema`);
       }
 
+      let currentAvailablePart = null;
+      if (kind === 'available') {
+        let lookupSql = `SELECT part_num, color_id, ${meta.quantityColumn} AS quantity FROM ${table} WHERE ${meta.idColumn} = ?`;
+        const lookupParams = [rowId];
+        if (meta.linkColumn) {
+          lookupSql += ` AND ${meta.linkColumn} = ?`;
+          lookupParams.push(userSetId);
+        }
+        lookupSql += ' LIMIT 1';
+        const currentRows = await tx.query(lookupSql, lookupParams);
+        currentAvailablePart = currentRows?.[0] ?? null;
+        if (!currentAvailablePart) {
+          return false;
+        }
+      }
+
       let sql = `UPDATE ${table} SET ${meta.quantityColumn} = ? WHERE ${meta.idColumn} = ?`;
       const params = [normalizedQuantity, rowId];
       if (meta.linkColumn) {
@@ -390,7 +501,23 @@ async function updateBreakdownPart(userSetId, kind, rowId, quantity) {
       }
 
       const result = await tx.query(sql, params);
-      return result.affectedRows > 0;
+      if (result.affectedRows <= 0) {
+        return false;
+      }
+
+      if (kind === 'available' && currentAvailablePart) {
+        const previousQuantity = Math.max(0, Number(currentAvailablePart.quantity ?? 0));
+        const delta = previousQuantity - normalizedQuantity;
+        await adjustMissingFromAvailableDelta(
+          tx,
+          userSetId,
+          currentAvailablePart.part_num,
+          currentAvailablePart.color_id,
+          delta
+        );
+      }
+
+      return true;
     });
   } catch (error) {
     return Promise.reject(error);
@@ -410,6 +537,22 @@ async function deleteBreakdownPart(userSetId, kind, rowId) {
         throw new Error(`Unsupported ${table} schema`);
       }
 
+      let deletedAvailablePart = null;
+      if (kind === 'available') {
+        let lookupSql = `SELECT part_num, color_id, ${meta.quantityColumn} AS quantity FROM ${table} WHERE ${meta.idColumn} = ?`;
+        const lookupParams = [rowId];
+        if (meta.linkColumn) {
+          lookupSql += ` AND ${meta.linkColumn} = ?`;
+          lookupParams.push(userSetId);
+        }
+        lookupSql += ' LIMIT 1';
+        const currentRows = await tx.query(lookupSql, lookupParams);
+        deletedAvailablePart = currentRows?.[0] ?? null;
+        if (!deletedAvailablePart) {
+          return false;
+        }
+      }
+
       let sql = `DELETE FROM ${table} WHERE ${meta.idColumn} = ?`;
       const params = [rowId];
       if (meta.linkColumn) {
@@ -418,7 +561,21 @@ async function deleteBreakdownPart(userSetId, kind, rowId) {
       }
 
       const result = await tx.query(sql, params);
-      return result.affectedRows > 0;
+      if (result.affectedRows <= 0) {
+        return false;
+      }
+
+      if (kind === 'available' && deletedAvailablePart) {
+        await adjustMissingFromAvailableDelta(
+          tx,
+          userSetId,
+          deletedAvailablePart.part_num,
+          deletedAvailablePart.color_id,
+          Math.max(0, Number(deletedAvailablePart.quantity ?? 0))
+        );
+      }
+
+      return true;
     });
   } catch (error) {
     return Promise.reject(error);

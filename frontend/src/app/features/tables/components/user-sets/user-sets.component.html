@@ -310,6 +310,42 @@
 								<p class="error" *ngIf="breakdownError() && !breakdownLoading()">{{ breakdownError() }}</p>
 
 								<div *ngIf="expandedBreakdown() as breakdown">
+									<h3>{{ 'Set Details' | t }}</h3>
+									<div class="set-meta-editor">
+										<mat-form-field appearance="outline">
+											<mat-label>{{ 'Public Condition' | t }}</mat-label>
+											<mat-select
+												[value]="getEditableSetCondition(row)"
+												(selectionChange)="setEditableSetCondition(row, $event.value)"
+												panelClass="lego-select-panel"
+											>
+												<mat-option *ngFor="let option of publicConditionOptions" [value]="option.value">
+													{{ option.label | t }}
+												</mat-option>
+											</mat-select>
+										</mat-form-field>
+
+										<mat-form-field appearance="outline">
+											<mat-label>{{ 'Purchase Price' | t }}</mat-label>
+											<input
+												matInput
+												type="number"
+												[value]="getEditableSetPrice(row)"
+												(input)="setEditableSetPrice(row, $any($event.target).value)"
+											/>
+										</mat-form-field>
+
+										<button
+											mat-flat-button
+											type="button"
+											class="save-inline-btn"
+											(click)="saveCatalogSetMeta(row)"
+											[disabled]="isSavingSetMeta(row)"
+										>
+											{{ 'Save Set Details' | t }}
+										</button>
+									</div>
+
 									<h3>{{ 'Available Parts' | t }}</h3>
 									<div class="parts-list mini-list" *ngIf="breakdown.available_parts.length > 0; else noAvailableParts">
 										<div class="part-row part-row-edit" *ngFor="let part of breakdown.available_parts">

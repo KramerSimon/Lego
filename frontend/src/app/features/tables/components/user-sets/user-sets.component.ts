@@ -130,6 +130,8 @@ export class UserSetsComponent implements OnInit, OnDestroy {
   readonly updatingRowKey = signal<string | null>(null);
   readonly autoSaveStatus = signal<Record<string, 'idle' | 'saving' | 'saved' | 'error'>>({});
   readonly deletingUserSetId = signal<number | null>(null);
+  readonly savingSetMetaId = signal<number | null>(null);
+  readonly editedSetMeta = signal<Record<number, { condition_public: string; purchase_price: string }>>({});
   readonly selectedSetImageUrl = computed(() => {
     const selectedSetNum = (this.form.controls.set_num.value ?? '').trim();
     if (!selectedSetNum) {
@@ -687,6 +689,110 @@ export class UserSetsComponent implements OnInit, OnDestroy {
 
   isDeletingUserSet(row: Record<string, unknown>): boolean {
     return this.deletingUserSetId() === Number(row['user_set_id']);
+  }
+
+  getEditableSetCondition(row: Record<string, unknown>): string {
+    const userSetId = Number(row['user_set_id']);
+    const edited = this.editedSetMeta()[userSetId];
+    if (edited) {
+      return edited.condition_public;
+    }
+    return String(row['condition_public'] ?? '').trim();
+  }
+
+  getEditableSetPrice(row: Record<string, unknown>): string {
+    const userSetId = Number(row['user_set_id']);
+    const edited = this.editedSetMeta()[userSetId];
+    if (edited) {
+      return edited.purchase_price;
+    }
+    const raw = row['purchase_price'];
+    if (raw == null || raw === '') {
+      return '';
+    }
+    const numeric = Number(raw);
+    return Number.isFinite(numeric) ? String(numeric) : '';
+  }
+
+  setEditableSetCondition(row: Record<string, unknown>, value: string): void {
+    const userSetId = Number(row['user_set_id']);
+    if (!Number.isFinite(userSetId) || userSetId <= 0) {
+      return;
+    }
+    const current = this.editedSetMeta()[userSetId] ?? {
+      condition_public: this.getEditableSetCondition(row),
+      purchase_price: this.getEditableSetPrice(row)
+    };
+    this.editedSetMeta.update((state) => ({
+      ...state,
+      [userSetId]: {
+        ...current,
+        condition_public: String(value ?? '').trim()
+      }
+    }));
+  }
+
+  setEditableSetPrice(row: Record<string, unknown>, value: string): void {
+    const userSetId = Number(row['user_set_id']);
+    if (!Number.isFinite(userSetId) || userSetId <= 0) {
+      return;
+    }
+    const current = this.editedSetMeta()[userSetId] ?? {
+      condition_public: this.getEditableSetCondition(row),
+      purchase_price: this.getEditableSetPrice(row)
+    };
+    this.editedSetMeta.update((state) => ({
+      ...state,
+      [userSetId]: {
+        ...current,
+        purchase_price: String(value ?? '').trim()
+      }
+    }));
+  }
+
+  saveCatalogSetMeta(row: Record<string, unknown>): void {
+    const userSetId = Number(row['user_set_id']);
+    if (!Number.isFinite(userSetId) || userSetId <= 0 || this.savingSetMetaId() === userSetId) {
+      return;
+    }
+
+    const conditionPublic = this.getEditableSetCondition(row);
+    const rawPrice = this.getEditableSetPrice(row);
+    const parsedPrice = rawPrice === '' ? null : Number(rawPrice);
+
+    if (rawPrice !== '' && !Number.isFinite(parsedPrice)) {
+      this.snackBar.open('Purchase price must be a valid number.', 'Close', { duration: 2600 });
+      return;
+    }
+
+    this.savingSetMetaId.set(userSetId);
+    this.userSetsApi.updateUserSet(userSetId, {
+      condition_public: conditionPublic || null,
+      purchase_price: parsedPrice
+    }).subscribe({
+      next: () => {
+        this.savingSetMetaId.set(null);
+        this.rows.update((rows) => rows.map((entry) => {
+          if (Number(entry['user_set_id']) !== userSetId) {
+            return entry;
+          }
+          return {
+            ...entry,
+            condition_public: conditionPublic || null,
+            purchase_price: parsedPrice
+          };
+        }));
+        this.snackBar.open('Set details updated.', 'Close', { duration: 1800 });
+      },
+      error: () => {
+        this.savingSetMetaId.set(null);
+        this.snackBar.open('Failed to update set details.', 'Close', { duration: 2600 });
+      }
+    });
+  }
+
+  isSavingSetMeta(row: Record<string, unknown>): boolean {
+    return this.savingSetMetaId() === Number(row['user_set_id']);
   }
 
   isUpdatingRow(kind: 'available' | 'missing', rowId: number): boolean {

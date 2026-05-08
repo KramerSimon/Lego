@@ -264,27 +264,6 @@
 	margin-bottom: 16px;
 }
 
-.global-search-shell {
-	margin-top: 12px;
-	display: grid;
-	grid-template-columns: minmax(260px, 1fr) minmax(130px, 180px) auto;
-	gap: 10px;
-	align-items: center;
-}
-
-.global-search-input,
-.global-search-scope {
-	width: 100%;
-}
-
-.global-search-btn {
-	min-height: 44px;
-	border-radius: 999px;
-	font-weight: 700;
-	background: var(--lego-btn-primary-bg);
-	color: var(--lego-btn-primary-fg);
-}
-
 .hero-intro {
 	display: flex;
 	align-items: center;
